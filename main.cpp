@@ -188,9 +188,13 @@ struct RunConfig
 bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 {
 	if (!std::filesystem::exists(run_file))
-		return 0;
+	{
+		std::cout << "run.yaml: not found" << std::endl;
+		return false;
+	}
 	YAML::Node run_node = YAML::LoadFile(run_file);
-	if (run_node.Type() != YAML::NodeType::Map) {
+	if (run_node.Type() != YAML::NodeType::Map)
+	{
 		std::cout << "run.yaml: root node not a mapping" << std::endl;
 		return false;
 	}
@@ -326,6 +330,7 @@ int main(int argc, char* argv[])
 
 	std::vector<std::multimap<uint32_t, Event>> all_events(cfg.videos.size());		// one for each video
 	Event evt;
+	std::map<std::string, uint32_t> event_counter;
 	while (1)
 	{
 		if (!event_queue.pop(evt, 30))
@@ -353,6 +358,10 @@ int main(int argc, char* argv[])
 			}
 			std::cout << buf << std::string(120 - strlen(buf), ' ') << std::endl;
 			all_events[evt.video_idx].emplace(evt.frame_number, evt);
+			if (event_counter.find(evt.message) == event_counter.end())
+				event_counter.emplace(evt.message, 1);
+			else
+				event_counter[evt.message]++;
 		}
 
 		if (ended_thread == uint32_t(threads.size()))
@@ -362,6 +371,8 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
+	std::cout << std::endl;
+
 	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
 	{
 		std::ostringstream os;
@@ -378,6 +389,8 @@ int main(int argc, char* argv[])
 			ofs << os.str();
 	}
 
+	for (auto& itor : event_counter)
+		std::cout << itor.first << ": " << itor.second << std::endl;
 
 	return 0;
 }
