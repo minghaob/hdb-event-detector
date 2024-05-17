@@ -103,7 +103,7 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 	std::string ret = std::unique_ptr<char[]>(_tess_api.GetUTF8Text()).get();
 
 	// OCR text from tesseract sometimes ends with '\n', trim that
-	if (ret[ret.size() - 1] == '\n')
+	if (ret.size() && ret[ret.size() - 1] == '\n')
 		ret = ret.substr(0, ret.size() - 1);
 
 	//std::cout << ret << std::endl;

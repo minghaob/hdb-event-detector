@@ -2,3 +2,6 @@
 /event-detector/
 *.exe
 *.pdb
+/event-detector.args.json
+/event-detector.vcxproj.user
+*.dll
