@@ -133,27 +133,26 @@ void AnalyseVideo(uint32_t video_idx, const std::string &video_file, cv::Rect ga
 				{
 					if (itor == last_item_detected_frame.end())
 						itor = last_item_detected_frame.emplace(item, cur_frame).first;
-					else
-						itor->second = cur_frame;
 					Event evt;
 					evt.frame_number = frame_number;
 					evt.video_idx = video_idx;
 					evt.message = item;
 					queue.push(evt);
 				}
+				itor->second = cur_frame;
 			}
 
 			if (tower_detector.IsActivatingTower(frame(game_rect)))
 			{
 				if (last_tower_detected_frame < 0 || last_tower_detected_frame <= cur_frame - item_box_duration_nframe)
 				{
-					last_tower_detected_frame = cur_frame;
 					Event evt;
 					evt.frame_number = frame_number;
 					evt.video_idx = video_idx;
 					evt.message = "Sheikah Tower activated.";
 					queue.push(evt);
 				}
+				last_tower_detected_frame = cur_frame;
 			}
 		}
 	}
@@ -379,9 +378,9 @@ int main(int argc, char* argv[])
 		os << "---" << std::endl;
 		os << "events:" << std::endl;
 		for (const auto& itor : all_events[i])
-			os << "  -- [" << itor.second.frame_number << ", \"" << itor.second.message << "\"]" << std::endl;
+			os << "  - [" << itor.second.frame_number << ", \"" << itor.second.message << "\"]" << std::endl;
 
-		fs::path raw_path = yaml_path / ("raw_" + (i < 10 ? "0" + std::to_string(i) : std::to_string(i)) + ".yaml");
+		fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
 		std::ofstream ofs(raw_path.string());
 		if (!ofs.is_open())
 			std::cout << os.str();
