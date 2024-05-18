@@ -188,20 +188,20 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 {
 	if (!std::filesystem::exists(run_file))
 	{
-		std::cout << "run.yaml: not found" << std::endl;
+		std::cout << run_file << " : not found" << std::endl;
 		return false;
 	}
 	YAML::Node run_node = YAML::LoadFile(run_file);
 	if (run_node.Type() != YAML::NodeType::Map)
 	{
-		std::cout << "run.yaml: root node not a mapping" << std::endl;
+		std::cout << "run file: root node not a mapping" << std::endl;
 		return false;
 	}
 
 	YAML::Node uid_node = run_node["uid"];
 	if (!uid_node)
 	{
-		std::cout << "run.yaml: root node does not have 'uid' member" << std::endl;
+		std::cout << "run file: root node does not have 'uid' member" << std::endl;
 		return false;
 	}
 	run_cfg.uid = run_node["uid"].as<std::string>();
@@ -209,7 +209,7 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 	YAML::Node videos_node = run_node["videos"];
 	if (!videos_node || videos_node.Type() != YAML::NodeType::Sequence || videos_node.size() == 0)
 	{
-		std::cout << "run.yaml: root node does not have a non-empty sequence member 'videos'." << std::endl;
+		std::cout << "run file: root node does not have a non-empty sequence member 'videos'." << std::endl;
 		return false;
 	}
 	run_cfg.videos.resize(videos_node.size());
@@ -218,7 +218,7 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 	{
 		if (videos_node[video_idx].Type() != YAML::NodeType::Map)
 		{
-			std::cout << "run.yaml: videos[" << video_idx << "] not a mapping" << std::endl;
+			std::cout << "run file: videos[" << video_idx << "] not a mapping" << std::endl;
 			return false;
 		}
 
@@ -226,7 +226,7 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 		YAML::Node local_node = videos_node[video_idx]["local"];
 		if (!local_node)
 		{
-			std::cout << "run.yaml: videos[" << video_idx << "].local not found" << std::endl;
+			std::cout << "run file: videos[" << video_idx << "].local not found" << std::endl;
 			return false;
 		}
 		run_cfg.videos[video_idx].filename = local_node.as<std::string>();
@@ -235,7 +235,7 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 		YAML::Node game_rect_node = videos_node[video_idx]["game_rect"];
 		if (!game_rect_node || game_rect_node.Type() != YAML::NodeType::Sequence || game_rect_node.size() != 4)
 		{
-			std::cout << "run.yaml: videos[" << video_idx << "].game_rect.size() != 4" << std::endl;
+			std::cout << "run file: videos[" << video_idx << "].game_rect.size() != 4" << std::endl;
 			return false;
 		}
 		run_cfg.videos[video_idx].bbox_left   = game_rect_node[0].as<uint32_t>();
@@ -247,7 +247,7 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 		YAML::Node segments_node = videos_node[video_idx]["segments"];
 		if (!segments_node || segments_node.Type() != YAML::NodeType::Sequence || segments_node.size() == 0)
 		{
-			std::cout << "run.yaml: videos[" << video_idx << "].segments.size() == 0" << std::endl;
+			std::cout << "run file: videos[" << video_idx << "].segments.size() == 0" << std::endl;
 			return false;
 		}
 		run_cfg.videos[video_idx].segments.resize(segments_node.size());
@@ -255,7 +255,7 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 		{
 			if (segments_node[seg_idx].Type() != YAML::NodeType::Sequence || segments_node[seg_idx].size() != 2)
 			{
-				std::cout << "run.yaml: videos[" << video_idx << "].segments[" << seg_idx << "].size() != 2" << std::endl;
+				std::cout << "run file: videos[" << video_idx << "].segments[" << seg_idx << "].size() != 2" << std::endl;
 				return false;
 			}
 			run_cfg.videos[video_idx].segments[seg_idx].start_frame = segments_node[seg_idx][0].as<uint32_t>();
@@ -282,9 +282,23 @@ int main(int argc, char* argv[])
 
 	namespace fs = std::filesystem;
 	fs::path yaml_path = argv[1];
+	fs::path yaml_file_path;
+	if (fs::is_regular_file(yaml_path))
+	{
+		yaml_file_path = yaml_path;
+		yaml_path = yaml_path.parent_path();
+	}
+	else if (fs::is_directory(yaml_path))
+		yaml_file_path = yaml_path / "run.yaml";
+	else
+	{
+		std::cout << "Invalid path or file name: " << yaml_path.string() << std::endl;
+		return 0;
+	}
+
 
 	RunConfig cfg;
-	if (!LoadRunYaml(cfg, (yaml_path / "run.yaml").string()))
+	if (!LoadRunYaml(cfg, yaml_file_path.string()))
 		return 0;
 
 	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
@@ -341,7 +355,7 @@ int main(int argc, char* argv[])
 				{
 					int frame_in_sec = thread_current_frame[i] % 30;
 					int sec = thread_current_frame[i] / 30;
-					sprintf_s(buf, "[%d] %02d:%02d:%02d.%02d(%.1lf%%) ", thread_current_frame[i], sec / 3600, sec % 3600 / 60, sec % 60, frame_in_sec, (thread_current_frame[i] - start_frame[i]) * 100.0f / total_frame[i]);
+					sprintf_s(buf, "[%d] %02d:%02d:%02d.%02d(%.1lf%%) ", thread_current_frame[i], sec / 3600, sec % 3600 / 60, sec % 60, frame_in_sec, (thread_current_frame[i] - start_frame[i] + 1) * 100.0f / total_frame[i]);
 				}
 				os << buf;
 			}
@@ -372,20 +386,23 @@ int main(int argc, char* argv[])
 	}
 	std::cout << std::endl;
 
-	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
+	if (yaml_file_path.filename() == "run.yaml")
 	{
-		std::ostringstream os;
-		os << "---" << std::endl;
-		os << "events:" << std::endl;
-		for (const auto& itor : all_events[i])
-			os << "  - [" << itor.second.frame_number << ", \"" << itor.second.message << "\"]" << std::endl;
+		for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
+		{
+			std::ostringstream os;
+			os << "---" << std::endl;
+			os << "events:" << std::endl;
+			for (const auto& itor : all_events[i])
+				os << "  - [" << itor.second.frame_number << ", \"" << itor.second.message << "\"]" << std::endl;
 
-		fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
-		std::ofstream ofs(raw_path.string());
-		if (!ofs.is_open())
-			std::cout << os.str();
-		else
-			ofs << os.str();
+			fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
+			std::ofstream ofs(raw_path.string());
+			if (!ofs.is_open())
+				std::cout << os.str();
+			else
+				ofs << os.str();
+		}
 	}
 
 	for (auto& itor : event_counter)
