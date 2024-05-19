@@ -26,7 +26,7 @@ bool TowerActivationDetector::Init(const char* lang)
 static bool EarlyOutTest(const cv::Mat& game_img, uint32_t bbox_col0, uint32_t bbox_col1, uint32_t bbox_row0, uint32_t bbox_row1)
 {
 	int _brightness_threshold = 204;
-	double _bright_pixel_ratio_low = 0.17, _bright_pixel_ratio_high = 0.21;
+	double _bright_pixel_ratio_low = 0.15, _bright_pixel_ratio_high = 0.21;
 
 	// Peek the left-most third of the bbox, the items we want to detect are at least this this wide
 	cv::Mat locationMinimalFrame;
@@ -77,9 +77,11 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 	cv::cvtColor(bbox_frame, bbox_frame, cv::COLOR_BGR2GRAY);
 	for (int i = 0; i < bbox_frame.rows; i++)
 	{
+		uint8_t lower = 180;
+		uint8_t upper = 255;
 		uint8_t* data = bbox_frame.row(i).data;
 		for (int j = 0; j < bbox_frame.cols; j++)
-			data[j] = 255 - (std::max(data[j], uint8_t(204)) - 204) * 5;		// invert the image so that the text is black-on-white. For some reason, Tesseract OCRs such text at almost double the speed compared to white-on-black text.
+			data[j] = uint8_t(((std::clamp(data[j], lower, upper) -  lower) * 255.0 + 0.5) / (upper - lower));
 	}
 	cv::cvtColor(bbox_frame, bbox_frame, cv::COLOR_GRAY2BGRA);
 	//cv::imwrite("item.png", bbox_frame);
