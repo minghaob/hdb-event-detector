@@ -26,7 +26,7 @@ bool TowerActivationDetector::Init(const char* lang)
 static bool EarlyOutTest(const cv::Mat& game_img, uint32_t bbox_col0, uint32_t bbox_col1, uint32_t bbox_row0, uint32_t bbox_row1)
 {
 	int _brightness_threshold = 204;
-	double _bright_pixel_ratio_low = 0.15, _bright_pixel_ratio_high = 0.21;
+	double _bright_pixel_ratio_low = 0.15, _bright_pixel_ratio_high = 0.23;
 
 	// Peek the left-most third of the bbox, the items we want to detect are at least this this wide
 	cv::Mat locationMinimalFrame;
