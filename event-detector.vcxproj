@@ -20,12 +20,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="item_detector.h" />
     <ClInclude Include="location_detector.h" />
     <ClInclude Include="tower_activation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common.cpp" />
+    <ClCompile Include="config.cpp" />
     <ClCompile Include="item_detector.cpp" />
     <ClCompile Include="location_detector.cpp" />
     <ClCompile Include="main.cpp" />

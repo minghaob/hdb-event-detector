@@ -1,0 +1,25 @@
+#pragma once
+#include <vector>
+#include <string>
+
+struct RunConfig
+{
+	struct Video {
+		struct Segment {
+			uint32_t start_frame;
+			uint32_t end_frame;
+		};
+		std::string filename;
+		uint32_t bbox_left;
+		uint32_t bbox_right;
+		uint32_t bbox_top;
+		uint32_t bbox_bottom;
+		std::vector<Segment> segments;
+	};
+
+	std::string uid;
+	std::vector<Video> videos;
+
+};
+
+bool LoadRunYaml(RunConfig& run_cfg, std::string run_file);
