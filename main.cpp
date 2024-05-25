@@ -1,19 +1,15 @@
 #include <filesystem>
 #include <thread>
+#include <ranges>
+#include <numeric>
 
 #include "common.h"
 #include "location_detector.h"
 #include "item_detector.h"
 #include "tower_activation.h"
 #include "config.h"
+#include "scheduler.h"
 
-
-struct Event
-{
-	uint32_t video_idx;
-	uint32_t frame_number;
-	std::string message;
-};
 
 template <typename T>
 class ThreadSafeQueue {
@@ -53,8 +49,10 @@ public:
 	}
 };
 
-void AnalyseVideo(uint32_t video_idx, const std::string &video_file, cv::Rect game_rect, uint32_t frame_start, uint32_t frame_end, ThreadSafeQueue<Event> &queue, uint32_t &feedback_frame_number, std::atomic<uint32_t> &ended_thread)
+void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector<IntraFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
 {
+	::SetThreadGroupAffinity(::GetCurrentThread(), thread_affinity, nullptr);
+
 	std::string lang = "eng";
 
 	LocationDetector location_detector;
@@ -83,7 +81,7 @@ void AnalyseVideo(uint32_t video_idx, const std::string &video_file, cv::Rect ga
 		double fps = cap.get(cv::CAP_PROP_FPS);
 		if (fps != 30)
 		{
-			std::cout << "video[" << video_idx << "]: fps != 30" << std::endl;
+			std::cout << video_file << ": fps != 30" << std::endl;
 			exit(-1);
 		}
 		//std::cout << "Frame rate: " << fps << std::endl;
@@ -93,66 +91,65 @@ void AnalyseVideo(uint32_t video_idx, const std::string &video_file, cv::Rect ga
 		double format = cap.get(cv::CAP_PROP_FORMAT);
 		//std::cout << "Format: " << format << std::endl;
 
-		if (frame_start >= num_frames || frame_end >= num_frames || frame_start > frame_end)
-		{
-			std::cout << "video[" << video_idx << "]: segment [" << frame_start << ", " << frame_end << "] has range issues" << std::endl;
-			exit(-1);
-		}
+		int work_item = -1;
+		uint32_t frame_start = 0, frame_end = 0;
 
-		if (frame_start > 0)
-			cap.set(cv::CAP_PROP_POS_FRAMES, frame_start - 1);			// VideoCapture.read() reads the next frame
-
-		if (game_rect.x < 0 || game_rect.y < 0 || game_rect.x + game_rect.width >(int)width || game_rect.y + game_rect.height >(int)height)
+		while (true)
 		{
-			std::cout << "video[" << video_idx << "]: game image area outside video frame" << std::endl;
-			exit(-1);
-		}
-		//std::cout << "Game area: (" << game_rect.x << ", " << game_rect.y << ") + (" << game_rect.width << ", " << game_rect.height << ")" << std::endl;
-
-		constexpr double item_box_duration = 3;		// 3 seconds for an item box
-		const int32_t item_box_duration_nframe = int32_t(item_box_duration * fps + 0.5);
-		std::map<std::string, int32_t> last_item_detected_frame;
-		int32_t last_tower_detected_frame = -1;
-		for (uint32_t frame_number = frame_start; frame_number <= frame_end; frame_number++)
-		{
-			feedback_frame_number = frame_number;
-			DWORD tbegin = ::timeGetTime();
-			cv::Mat frame;
-			if (!cap.read(frame))
+			uint32_t last_frame_end = frame_end;
+			work_item = scheduler.GetNextWorkItem(work_item, frame_start, frame_end);
+			if (work_item < 0)
 				break;
 
-			int cur_frame = int(cap.get(cv::CAP_PROP_POS_FRAMES));
-
-			DWORD tend = ::timeGetTime();
-
-			std::string item = item_detector.GetItem(frame(game_rect));
-			if (!item.empty())
+			if (frame_start >= num_frames || frame_end >= num_frames || frame_start > frame_end)
 			{
-				auto itor = last_item_detected_frame.find(item);
-				if (itor == last_item_detected_frame.end() || itor->second <= cur_frame - item_box_duration_nframe)
-				{
-					if (itor == last_item_detected_frame.end())
-						itor = last_item_detected_frame.emplace(item, cur_frame).first;
-					Event evt;
-					evt.frame_number = frame_number;
-					evt.video_idx = video_idx;
-					evt.message = item;
-					queue.push(evt);
-				}
-				itor->second = cur_frame;
+				std::cout << "segment [" << frame_start << ", " << frame_end << "] has range issues" << std::endl;
+				exit(-1);
 			}
 
-			if (tower_detector.IsActivatingTower(frame(game_rect)))
+			if (frame_start != uint32_t(cap.get(cv::CAP_PROP_POS_FRAMES)))
+				cap.set(cv::CAP_PROP_POS_FRAMES, frame_start);
+
+			if (game_rect.x < 0 || game_rect.y < 0 || game_rect.x + game_rect.width >(int)width || game_rect.y + game_rect.height >(int)height)
 			{
-				if (last_tower_detected_frame < 0 || last_tower_detected_frame <= cur_frame - item_box_duration_nframe)
+				std::cout << "game image area outside video frame" << std::endl;
+				exit(-1);
+			}
+
+			for (uint32_t cur_frame = frame_start; cur_frame <= frame_end; cur_frame++)
+			{
+				cv::Mat frame;
+				if (!cap.read(frame))
+					break;
+
+				std::string item = item_detector.GetItem(frame(game_rect));
+				if (!item.empty())
 				{
-					Event evt;
-					evt.frame_number = frame_number;
-					evt.video_idx = video_idx;
-					evt.message = "Sheikah Tower activated.";
-					queue.push(evt);
+					if (item == "Korok Seed")
+					{
+						outEvents.push_back({
+							.frame_number = cur_frame,
+							.type = IntraFrameEventType::Korok,
+						});
+					}
+					else if (item == "Spirit Orb")
+					{
+						outEvents.push_back({
+							.frame_number = cur_frame,
+							.type = IntraFrameEventType::SpiritOrb,
+						});
+					}
 				}
-				last_tower_detected_frame = cur_frame;
+
+				if (tower_detector.IsActivatingTower(frame(game_rect)))
+				{
+					outEvents.push_back({
+							.frame_number = cur_frame,
+							.type = IntraFrameEventType::TowerActivation,
+					});
+				}
+
+				num_frame_parsed++;
 			}
 		}
 	}
@@ -161,8 +158,6 @@ void AnalyseVideo(uint32_t video_idx, const std::string &video_file, cv::Rect ga
 		std::cout << "Cannot open video file " << video_file << std::endl;
 		exit(-1);
 	}
-
-	ended_thread++;
 }
 
 int main(int argc, char* argv[])
@@ -208,91 +203,112 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	std::size_t num_segments = 0;
-	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
-		num_segments += cfg.videos[i].segments.size();
+	VideoParserScheduler scheduler;
+	std::cout << "Processing with " << scheduler.GetNumThreads() << " work threads" << std::endl;
 
-	ThreadSafeQueue<Event> event_queue;							// workers push, main thread pops
-	std::vector<uint32_t> thread_current_frame(num_segments);	// workers write, main thread read
-	std::vector<uint32_t> start_frame(num_segments);
-	std::vector<uint32_t> total_frame(num_segments);
-	std::atomic<uint32_t> ended_thread = 0;
-
-	std::vector<std::thread> threads;
+	std::map<std::string, uint32_t> event_counter;
 
 	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
 	{
+		std::multimap<uint32_t, IntraFrameEvent> merged_events;
+
 		for (uint32_t j = 0; j < uint32_t(cfg.videos[i].segments.size()); j++)
 		{
-			start_frame[threads.size()] = cfg.videos[i].segments[j].start_frame;
-			total_frame[threads.size()] = cfg.videos[i].segments[j].end_frame - cfg.videos[i].segments[j].start_frame + 1;
-			thread_current_frame[threads.size()] = start_frame[threads.size()];
-			threads.emplace_back(AnalyseVideo,
-				i,
-				(yaml_path / cfg.videos[i].filename).string(),
-				cv::Rect(cfg.videos[i].bbox_left, cfg.videos[i].bbox_top, cfg.videos[i].bbox_right - cfg.videos[i].bbox_left + 1, cfg.videos[i].bbox_bottom - cfg.videos[i].bbox_top + 1),
-				cfg.videos[i].segments[j].start_frame,
-				cfg.videos[i].segments[j].end_frame,
-				std::ref(event_queue),
-				std::ref(thread_current_frame[threads.size()]),
-				std::ref(ended_thread));
-		}
-	}
-
-	std::vector<std::multimap<uint32_t, Event>> all_events(cfg.videos.size());		// one for each video
-	Event evt;
-	std::map<std::string, uint32_t> event_counter;
-	while (1)
-	{
-		if (!event_queue.pop(evt, 30))
-		{
-			std::ostringstream os;
-			for (std::size_t i = 0; i < thread_current_frame.size(); i++)
+			scheduler.AllocateWorkBatch(cfg.videos[i].segments[j].start_frame, cfg.videos[i].segments[j].end_frame);
+			std::vector<std::thread> threads;
+			std::atomic<uint32_t> num_ended_thread = 0;
+			std::vector<std::vector<IntraFrameEvent>> events(scheduler.GetNumThreads());
+			std::vector<uint32_t> num_frame_parsed(scheduler.GetNumThreads(), 0);
+			for (uint32_t thd_idx = 0; thd_idx < scheduler.GetNumThreads(); thd_idx++)
 			{
-				char buf[40];
+				threads.emplace_back(AnalyseVideo,
+					(yaml_path / cfg.videos[i].filename).string(),
+					cv::Rect(cfg.videos[i].bbox_left, cfg.videos[i].bbox_top, cfg.videos[i].bbox_right - cfg.videos[i].bbox_left + 1, cfg.videos[i].bbox_bottom - cfg.videos[i].bbox_top + 1),
+					std::ref(events[thd_idx]),
+					std::ref(num_frame_parsed[thd_idx]),
+					std::ref(scheduler),
+					scheduler.GetThreadAffinity(thd_idx));
+			}
+			uint32_t num_frame_total = cfg.videos[i].segments[j].end_frame - cfg.videos[i].segments[j].start_frame + 1;
+			DWORD tbegin = ::timeGetTime();
+			uint32_t fps = 0;
+			uint32_t last_frame_parsed = 0;
+			while (1)
+			{
+				//uint32_t num_item_remaining = scheduler.GetNumRemainingWorkItems();
+				//std::string str = "video[" + std::to_string(i) + "].segment[" + std::to_string(j) + "]: " + std::to_string(num_item_remaining) + "/" + std::to_string(num_item_total) + " work items left.";
+				uint32_t total_frame_parsed = std::accumulate(num_frame_parsed.begin(), num_frame_parsed.end(), 0);
+
+				DWORD tend = ::timeGetTime();
+				if (tend - tbegin > 200)
 				{
-					int frame_in_sec = thread_current_frame[i] % 30;
-					int sec = thread_current_frame[i] / 30;
-					sprintf_s(buf, "[%d] %02d:%02d:%02d.%02d(%.1lf%%) ", thread_current_frame[i], sec / 3600, sec % 3600 / 60, sec % 60, frame_in_sec, (thread_current_frame[i] - start_frame[i] + 1) * 100.0f / total_frame[i]);
+					fps = uint32_t((total_frame_parsed - last_frame_parsed) * 1000.0 / (tend - tbegin));
+					last_frame_parsed = total_frame_parsed;
+					tbegin = tend;
 				}
-				os << buf;
+
+				std::string str = "video[" + std::to_string(i) + "].segment[" + std::to_string(j) + "]: " + util::FrameToTimeString(total_frame_parsed) + "/" + util::FrameToTimeString(num_frame_total) + " done. (Processing at " + std::to_string(fps) + " fps)";
+				std::cout << str << std::string(120 - str.size(), ' ') << '\r';
+
+				if (total_frame_parsed == num_frame_total)
+					break;
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 			}
-			std::cout << os.str() << std::string(120 - os.str().size(), ' ') << '\r';
+			for (uint32_t thd_idx = 0; thd_idx < scheduler.GetNumThreads(); thd_idx++)
+				threads[thd_idx].join();
+			std::cout << std::endl;
+
+			for (const auto &thd_events : events)
+				for (const auto &event : thd_events)
+					merged_events.emplace(event.frame_number, event);
 		}
-		else
+
+		int32_t last_korok_frame = -1;
+		int32_t last_spirit_orb_frame = -1;
+		int32_t last_tower_activation_frame = -1;
+		std::multimap<uint32_t, std::string > all_events;
+		for (const auto& event : merged_events)
 		{
-			char buf[100];
+			if (event.second.type == IntraFrameEventType::Korok)
 			{
-				int frame_in_sec = evt.frame_number % 30;
-				int sec = evt.frame_number / 30;
-				sprintf_s(buf, "v[%d]: [%d] %02d:%02d:%02d.%02d %s", evt.video_idx, evt.frame_number, sec / 3600, sec % 3600 / 60, sec % 60, frame_in_sec, evt.message.c_str());
+				if (last_korok_frame < 0 || uint32_t(last_korok_frame + 90) <= event.second.frame_number)
+				{
+					printf("[%d] Korok Seed\n", event.second.frame_number);
+					all_events.emplace(event.second.frame_number, "Korok Seed");
+					event_counter.try_emplace("Korok Seed", 0).first->second++;
+				}
+				last_korok_frame = event.second.frame_number;
 			}
-			std::cout << buf << std::string(120 - strlen(buf), ' ') << std::endl;
-			all_events[evt.video_idx].emplace(evt.frame_number, evt);
-			if (event_counter.find(evt.message) == event_counter.end())
-				event_counter.emplace(evt.message, 1);
-			else
-				event_counter[evt.message]++;
+			if (event.second.type == IntraFrameEventType::SpiritOrb)
+			{
+				if (last_spirit_orb_frame < 0 || uint32_t(last_spirit_orb_frame + 90) <= event.second.frame_number)
+				{
+					printf("[%d] Spirit Orb\n", event.second.frame_number);
+					all_events.emplace(event.second.frame_number, "Spirit Orb");
+					event_counter.try_emplace("Spirit Orb", 0).first->second++;
+				}
+				last_spirit_orb_frame = event.second.frame_number;
+			}
+			if (event.second.type == IntraFrameEventType::TowerActivation)
+			{
+				if (last_tower_activation_frame < 0 || uint32_t(last_tower_activation_frame + 90) <= event.second.frame_number)
+				{
+					printf("[%d] Sheikah Tower activated.\n", event.second.frame_number);
+					all_events.emplace(event.second.frame_number, "Sheikah Tower activated.");
+					event_counter.try_emplace("Sheikah Tower activated.", 0).first->second++;
+				}
+				last_tower_activation_frame = event.second.frame_number;
+			}
 		}
 
-		if (ended_thread == uint32_t(threads.size()))
-		{
-			for (std::size_t i = 0; i < threads.size(); i++)
-				threads[i].join();
-			break;
-		}
-	}
-	std::cout << std::endl;
-
-	if (yaml_file_path.filename() == "run.yaml")
-	{
-		for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
+		if (yaml_file_path.filename() == "run.yaml")
 		{
 			std::ostringstream os;
 			os << "---" << std::endl;
 			os << "events:" << std::endl;
-			for (const auto& itor : all_events[i])
-				os << "  - [" << itor.second.frame_number << ", \"" << itor.second.message << "\"]" << std::endl;
+			for (const auto& itor : all_events)
+				os << "  - [" << itor.first << ", \"" << itor.second << "\"]" << std::endl;
 
 			fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
 			std::ofstream ofs(raw_path.string());

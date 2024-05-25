@@ -77,4 +77,49 @@ namespace util
 	 * Reorder channels of an opencv Mat in BGRA format to Leptonica RGBA order
 	 */
 	void OpenCvMatBGRAToLeptonicaRGBAInplace(cv::Mat& frame);
+
+	std::string FrameToTimeString(uint32_t frame);
 }
+
+enum class IntraFrameEventType : uint8_t
+{
+	Korok,
+	SpiritOrb,
+	TowerActivation,
+	LoadingScreen,
+	AlbumPage,
+	Talus,
+	Hinox,
+	Molduga,
+	ZoraMonument,
+	Dialog,
+};
+
+struct IntraFrameEvent
+{
+	uint32_t frame_number;
+	IntraFrameEventType type;
+	union {
+		struct {
+			uint8_t num_shrines;
+			uint8_t num_koroks;
+		} loadscreen_data;
+		struct {
+			uint8_t talus_id;
+		} talus_data;
+		struct {
+			uint8_t hinox_id;
+		} hinox_data;
+		struct {
+			uint8_t molduga_id;
+		} molduga_data;
+		struct {
+			uint8_t monument_id;
+		} monument_data;
+		struct {
+			uint8_t quest_id;
+			uint8_t dialog_id;
+			uint8_t npc_id;
+		} dialog_data;
+	};
+};
