@@ -29,21 +29,21 @@ static bool EarlyOutTest(const cv::Mat& game_img, uint32_t bbox_col0, uint32_t b
 	double _bright_pixel_ratio_low = 0.15, _bright_pixel_ratio_high = 0.23;
 
 	// Peek the left-most third of the bbox, the items we want to detect are at least this this wide
-	cv::Mat locationMinimalFrame;
-	cv::cvtColor(game_img(cv::Rect(bbox_col0, bbox_row0, (bbox_col1 - bbox_col0), bbox_row1 - bbox_row0)), locationMinimalFrame, cv::COLOR_BGR2GRAY);		// converting to gray
+	cv::Mat minimalFrame;
+	cv::cvtColor(game_img(cv::Rect(bbox_col0, bbox_row0, (bbox_col1 - bbox_col0), bbox_row1 - bbox_row0)), minimalFrame, cv::COLOR_BGR2GRAY);		// converting to gray
 	//cv::imwrite("tower.png", locationMinimalFrame);
 
 	// scan this area for bright pixels.
 	{
 		uint32_t num_bright_pixel = 0;
-		for (int i = 0; i < locationMinimalFrame.rows; i++)
+		for (int i = 0; i < minimalFrame.rows; i++)
 		{
-			uint8_t* data = locationMinimalFrame.row(i).data;
-			for (int j = 0; j < locationMinimalFrame.cols; j++)
+			uint8_t* data = minimalFrame.row(i).data;
+			for (int j = 0; j < minimalFrame.cols; j++)
 				if (data[j] > _brightness_threshold)
 					num_bright_pixel++;
 		}
-		double bright_pixel_ratio = double(num_bright_pixel) / (locationMinimalFrame.rows * locationMinimalFrame.cols);
+		double bright_pixel_ratio = double(num_bright_pixel) / (minimalFrame.rows * minimalFrame.cols);
 		//std::cout << bright_pixel_ratio << std::endl;
 		if (bright_pixel_ratio < _bright_pixel_ratio_low || bright_pixel_ratio > _bright_pixel_ratio_high)
 			return true;

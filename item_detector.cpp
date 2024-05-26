@@ -37,26 +37,37 @@ bool ItemDetector::InitItemList(const char* lang)
 
 static bool EarlyOutTest(const cv::Mat& game_img, uint32_t bbox_col0, uint32_t bbox_col1, uint32_t bbox_row0, uint32_t bbox_row1)
 {
-	int _brightness_threshold = 204;
+	uint8_t _bright_pixel_threshold = 204;
 	double _bright_pixel_ratio_low = 0.155, _bright_pixel_ratio_high = 0.27;
+	uint8_t _dark_pixel_threshold = 180;
+	double _dark_pixel_ratio_low = 0.5, _dark_pixel_ratio_high = 1;
 
 	// Peek the left-most third of the bbox, the items we want to detect are at least this this wide
-	cv::Mat locationMinimalFrame;
-	cv::cvtColor(game_img(cv::Rect(bbox_col0, bbox_row0, (bbox_col1 - bbox_col0) / 3, bbox_row1 - bbox_row0)), locationMinimalFrame, cv::COLOR_BGR2GRAY);		// converting to gray
+	cv::Mat minimalFrame;
+	cv::cvtColor(game_img(cv::Rect(bbox_col0, bbox_row0, (bbox_col1 - bbox_col0) / 3, bbox_row1 - bbox_row0)), minimalFrame, cv::COLOR_BGR2GRAY);		// converting to gray
+	//cv::imwrite("item_minimal.png", minimalFrame);
 	// scan this area for bright pixels.
 	{
 		uint32_t num_bright_pixel = 0;
-		for (int i = 0; i < locationMinimalFrame.rows; i++)
+		uint32_t num_dark_pixel = 0;
+		for (int i = 0; i < minimalFrame.rows; i++)
 		{
-			uint8_t* data = locationMinimalFrame.row(i).data;
-			for (int j = 0; j < locationMinimalFrame.cols; j++)
-				if (data[j] > _brightness_threshold)
+			uint8_t* data = minimalFrame.row(i).data;
+			for (int j = 0; j < minimalFrame.cols; j++)
+			{
+				if (data[j] > _bright_pixel_threshold)
 					num_bright_pixel++;
+				if (data[j] < _dark_pixel_threshold)
+					num_dark_pixel++;
+			}
 		}
-		double bright_pixel_ratio = double(num_bright_pixel) / (locationMinimalFrame.rows * locationMinimalFrame.cols);
-		//std::cout << bright_pixel_ratio << std::endl;
+		double bright_pixel_ratio = double(num_bright_pixel) / (minimalFrame.rows * minimalFrame.cols);
+		double dark_pixel_ratio = double(num_dark_pixel) / (minimalFrame.rows * minimalFrame.cols);
+		//std::cout << bright_pixel_ratio << " " << dark_pixel_ratio << std::endl;
 		//cv::imwrite("test.png", locationMinimalFrame);
 		if (bright_pixel_ratio < _bright_pixel_ratio_low || bright_pixel_ratio > _bright_pixel_ratio_high)
+			return true;
+		if (dark_pixel_ratio < _dark_pixel_ratio_low || dark_pixel_ratio > _dark_pixel_ratio_high)
 			return true;
 	}
 
@@ -95,6 +106,7 @@ std::string ItemDetector::GetItem(const cv::Mat& game_img)
 	double scale_factor = 1;// std::max(game_img.cols / 640.0, 1.0);	// according to experiments, it's still possible to recognize the item with high accuracy when the width of the game screen is 480.
 	cv::resize(game_img(cv::Rect(bbox_col0, bbox_row0, bbox_col1 - bbox_col0, bbox_row1 - bbox_row0)), bbox_frame, cv::Size(int((bbox_col1 - bbox_col0) / scale_factor), int((bbox_row1 - bbox_row0) / scale_factor)));
 
+	//cv::imwrite("item.png", bbox_frame);
 	cv::cvtColor(bbox_frame, bbox_frame, cv::COLOR_BGR2GRAY);
 	for (int i = 0; i < bbox_frame.rows; i++)
 	{
