@@ -204,7 +204,30 @@ int main(int argc, char* argv[])
 	}
 
 	VideoParserScheduler scheduler;
-	std::cout << "Processing with " << scheduler.GetNumThreads() << " work threads" << std::endl;
+	uint32_t num_threads = scheduler.GetNumThreads();
+	if (auto itor = cfg.options.find("num_threads"); itor != cfg.options.end())
+	{
+		try {
+			int32_t overriden_num_threads = std::stoi(itor->second);
+			if (overriden_num_threads < 1)
+			{
+				std::cout << "Invalid num_threads value '" << itor->second << "' in " << yaml_path.string() << std::endl;
+				return 0;
+			}
+			if (uint32_t(overriden_num_threads) > num_threads)
+			{
+				overriden_num_threads = num_threads;
+				std::cout << "num_threads value '" << itor->second << "' in " << yaml_path.string() << " to large. Clamping to number of CPU cores - 1." << std::endl;
+			}
+			num_threads = uint32_t(overriden_num_threads);
+		}
+		catch (...)
+		{
+			std::cout << "Invalid num_threads value '" << itor->second << "' in " << yaml_path.string() << std::endl;
+			return 0;
+		}
+	}
+	std::cout << "Processing with " << num_threads << " work threads" << std::endl;
 
 	std::map<std::string, uint32_t> event_counter;
 
@@ -217,9 +240,9 @@ int main(int argc, char* argv[])
 			scheduler.AllocateWorkBatch(cfg.videos[i].segments[j].start_frame, cfg.videos[i].segments[j].end_frame);
 			std::vector<std::thread> threads;
 			std::atomic<uint32_t> num_ended_thread = 0;
-			std::vector<std::vector<IntraFrameEvent>> events(scheduler.GetNumThreads());
-			std::vector<uint32_t> num_frame_parsed(scheduler.GetNumThreads(), 0);
-			for (uint32_t thd_idx = 0; thd_idx < scheduler.GetNumThreads(); thd_idx++)
+			std::vector<std::vector<IntraFrameEvent>> events(num_threads);
+			std::vector<uint32_t> num_frame_parsed(num_threads, 0);
+			for (uint32_t thd_idx = 0; thd_idx < num_threads; thd_idx++)
 			{
 				threads.emplace_back(AnalyseVideo,
 					(yaml_path / cfg.videos[i].filename).string(),
@@ -248,14 +271,14 @@ int main(int argc, char* argv[])
 				}
 
 				std::string str = "video[" + std::to_string(i) + "].segment[" + std::to_string(j) + "]: " + util::FrameToTimeString(total_frame_parsed) + "/" + util::FrameToTimeString(num_frame_total) + " done. (Processing at " + std::to_string(fps) + " fps)";
-				std::cout << str << std::string(120 - str.size(), ' ') << '\r';
+				std::cout << '\r' << str << std::string(100 - str.size(), ' ') << std::string(100 - str.size(), '\b');
 
 				if (total_frame_parsed == num_frame_total)
 					break;
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 			}
-			for (uint32_t thd_idx = 0; thd_idx < scheduler.GetNumThreads(); thd_idx++)
+			for (uint32_t thd_idx = 0; thd_idx < uint32_t(threads.size()); thd_idx++)
 				threads[thd_idx].join();
 			std::cout << std::endl;
 

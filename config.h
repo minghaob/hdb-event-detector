@@ -19,7 +19,7 @@ struct RunConfig
 
 	std::string uid;
 	std::vector<Video> videos;
-
+	std::map<std::string, std::string> options;
 };
 
 bool LoadRunYaml(RunConfig& run_cfg, std::string run_file);
