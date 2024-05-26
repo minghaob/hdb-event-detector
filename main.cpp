@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
 			{
 				if (last_korok_frame < 0 || uint32_t(last_korok_frame + 90) <= event.second.frame_number)
 				{
-					printf("[%d] Korok Seed\n", event.second.frame_number);
+					//printf("[%d] Korok Seed\n", event.second.frame_number);
 					all_events.emplace(event.second.frame_number, "Korok Seed");
 					event_counter.try_emplace("Korok Seed", 0).first->second++;
 				}
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
 			{
 				if (last_spirit_orb_frame < 0 || uint32_t(last_spirit_orb_frame + 90) <= event.second.frame_number)
 				{
-					printf("[%d] Spirit Orb\n", event.second.frame_number);
+					//printf("[%d] Spirit Orb\n", event.second.frame_number);
 					all_events.emplace(event.second.frame_number, "Spirit Orb");
 					event_counter.try_emplace("Spirit Orb", 0).first->second++;
 				}
@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
 			{
 				if (last_tower_activation_frame < 0 || uint32_t(last_tower_activation_frame + 90) <= event.second.frame_number)
 				{
-					printf("[%d] Sheikah Tower activated.\n", event.second.frame_number);
+					//printf("[%d] Sheikah Tower activated.\n", event.second.frame_number);
 					all_events.emplace(event.second.frame_number, "Sheikah Tower activated.");
 					event_counter.try_emplace("Sheikah Tower activated.", 0).first->second++;
 				}
