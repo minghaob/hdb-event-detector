@@ -62,7 +62,7 @@ int32_t VideoParserScheduler::GetNextWorkItem(int32_t last_item, uint32_t &next_
 	if (m_work_item_segments.size() == 1 && m_work_item_segments[0].first == 0)
 	{
 		ItemIndexToStartEndFrame(0, next_item_frame_start, next_item_frame_end);
-		if (m_work_item_segments[0].first > m_work_item_segments[0].second)
+		if (m_work_item_segments[0].first >= m_work_item_segments[0].second)
 			m_work_item_segments.erase(m_work_item_segments.begin());
 		else
 			m_work_item_segments[0].first++;
