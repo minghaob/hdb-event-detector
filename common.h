@@ -79,6 +79,7 @@ namespace util
 	void OpenCvMatBGRAToLeptonicaRGBAInplace(cv::Mat& frame);
 
 	std::string FrameToTimeString(uint32_t frame);
+	std::string SecondToTimeString(uint32_t sec);
 }
 
 enum class IntraFrameEventType : uint8_t

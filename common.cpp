@@ -57,11 +57,18 @@ void OpenCvMatBGRAToLeptonicaRGBAInplace(cv::Mat& frame)
 std::string FrameToTimeString(uint32_t frame)
 {
 	char buf[40];
-	{
-		int frame_in_sec = frame % 30;
-		int sec = frame / 30;
-		sprintf_s(buf, "%02d:%02d:%02d.%02d", sec / 3600, sec % 3600 / 60, sec % 60, frame_in_sec);
-	}
+	int frame_in_sec = frame % 30;
+	int sec = frame / 30;
+	sprintf_s(buf, "%02d:%02d:%02d.%02d", sec / 3600, sec % 3600 / 60, sec % 60, frame_in_sec);
+
+	return buf;
+}
+
+std::string SecondToTimeString(uint32_t sec)
+{
+	char buf[40];
+	sprintf_s(buf, "%02d:%02d:%02d", sec / 3600, sec % 3600 / 60, sec % 60);
+
 	return buf;
 }
 

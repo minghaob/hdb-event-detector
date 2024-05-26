@@ -237,6 +237,7 @@ int main(int argc, char* argv[])
 
 		for (uint32_t j = 0; j < uint32_t(cfg.videos[i].segments.size()); j++)
 		{
+			DWORD tbegin = ::timeGetTime();
 			scheduler.AllocateWorkBatch(cfg.videos[i].segments[j].start_frame, cfg.videos[i].segments[j].end_frame);
 			std::vector<std::thread> threads;
 			std::atomic<uint32_t> num_ended_thread = 0;
@@ -253,28 +254,31 @@ int main(int argc, char* argv[])
 					scheduler.GetThreadAffinity(thd_idx));
 			}
 			uint32_t num_frame_total = cfg.videos[i].segments[j].end_frame - cfg.videos[i].segments[j].start_frame + 1;
-			DWORD tbegin = ::timeGetTime();
+			DWORD fps_tbegin = ::timeGetTime();
 			uint32_t fps = 0;
 			uint32_t last_frame_parsed = 0;
 			while (1)
 			{
-				//uint32_t num_item_remaining = scheduler.GetNumRemainingWorkItems();
-				//std::string str = "video[" + std::to_string(i) + "].segment[" + std::to_string(j) + "]: " + std::to_string(num_item_remaining) + "/" + std::to_string(num_item_total) + " work items left.";
 				uint32_t total_frame_parsed = std::accumulate(num_frame_parsed.begin(), num_frame_parsed.end(), 0);
 
-				DWORD tend = ::timeGetTime();
-				if (tend - tbegin > 200)
+				DWORD fps_tend = ::timeGetTime();
+				if (fps_tend - fps_tbegin > 200)
 				{
-					fps = uint32_t((total_frame_parsed - last_frame_parsed) * 1000.0 / (tend - tbegin));
+					fps = uint32_t((total_frame_parsed - last_frame_parsed) * 1000.0 / (fps_tend - fps_tbegin));
 					last_frame_parsed = total_frame_parsed;
-					tbegin = tend;
+					fps_tbegin = fps_tend;
+				}
+
+				if (total_frame_parsed == num_frame_total)
+				{
+					uint32_t process_time_in_sec = (::timeGetTime() - tbegin) / 1000;
+					std::string str = "video[" + std::to_string(i) + "].segment[" + std::to_string(j) + "]: " + util::FrameToTimeString(num_frame_total) + " done. (Processed in " + util::SecondToTimeString(process_time_in_sec) + ")";
+					std::cout << '\r' << str << std::string(100 - str.size(), ' ') << std::string(100 - str.size(), '\b');
+					break;
 				}
 
 				std::string str = "video[" + std::to_string(i) + "].segment[" + std::to_string(j) + "]: " + util::FrameToTimeString(total_frame_parsed) + "/" + util::FrameToTimeString(num_frame_total) + " done. (Processing at " + std::to_string(fps) + " fps)";
 				std::cout << '\r' << str << std::string(100 - str.size(), ' ') << std::string(100 - str.size(), '\b');
-
-				if (total_frame_parsed == num_frame_total)
-					break;
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 			}
