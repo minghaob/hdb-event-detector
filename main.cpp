@@ -10,45 +10,6 @@
 #include "config.h"
 #include "scheduler.h"
 
-
-template <typename T>
-class ThreadSafeQueue {
-private:
-	std::mutex mutex;
-	std::queue<T> queue;
-	std::condition_variable cond;
-	std::atomic<bool> done{ false };
-
-public:
-	void push(T value) {
-		std::lock_guard<std::mutex> lock(mutex);
-		queue.push(std::move(value));
-		cond.notify_one();
-	}
-
-	// Timed pop with 1-second wake-up
-	bool pop(T& value, uint32_t wait_ms) {
-		std::unique_lock<std::mutex> lock(mutex);
-		while (queue.empty() && !done) {
-			// Wait for up to 1 second
-			if (cond.wait_for(lock, std::chrono::milliseconds(wait_ms)) == std::cv_status::timeout) {
-				return false; // No new messages, but wake up every second
-			}
-		}
-		if (!queue.empty()) {
-			value = std::move(queue.front());
-			queue.pop();
-			return true;
-		}
-		return false;
-	}
-
-	void finish() {
-		done = true;
-		cond.notify_all();
-	}
-};
-
 void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector<IntraFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
 {
 	::SetThreadGroupAffinity(::GetCurrentThread(), thread_affinity, nullptr);
