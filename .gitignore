@@ -5,3 +5,4 @@
 /event-detector.args.json
 /event-detector.vcxproj.user
 *.dll
+/x64
