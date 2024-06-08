@@ -11,7 +11,7 @@ private:
 	};
 
 private:
-	tesseract::TessBaseAPI _tess_api;
+	tesseract::TessBaseAPI &_tess_api;
 	std::vector<Location> _locations;
 
 private:
@@ -21,8 +21,8 @@ private:
 	std::string FindBestLocationMatch(const std::string& loc_in);
 
 public:
-	LocationDetector() = default;
-	~LocationDetector();
+	LocationDetector(tesseract::TessBaseAPI& api);
+	~LocationDetector() = default;
 	bool Init(const char* lang);
 
 	// returns empty string if nothing is detected

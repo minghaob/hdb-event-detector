@@ -1,4 +1,5 @@
 #include "tower_activation.h"
+#include "detector.h"
 
 TowerActivationDetector::TowerActivationDetector(tesseract::TessBaseAPI& api)
 	: _tess_api(api)
@@ -8,35 +9,6 @@ TowerActivationDetector::TowerActivationDetector(tesseract::TessBaseAPI& api)
 bool TowerActivationDetector::Init(const char* lang)
 {
 	return true;
-}
-
-static bool EarlyOutTest(const cv::Mat& game_img, uint32_t bbox_col0, uint32_t bbox_col1, uint32_t bbox_row0, uint32_t bbox_row1)
-{
-	int _brightness_threshold = 204;
-	double _bright_pixel_ratio_low = 0.15, _bright_pixel_ratio_high = 0.23;
-
-	// Peek the left-most third of the bbox, the items we want to detect are at least this this wide
-	cv::Mat minimalFrame;
-	cv::cvtColor(game_img(cv::Rect(bbox_col0, bbox_row0, (bbox_col1 - bbox_col0), bbox_row1 - bbox_row0)), minimalFrame, cv::COLOR_BGR2GRAY);		// converting to gray
-	//cv::imwrite("tower.png", locationMinimalFrame);
-
-	// scan this area for bright pixels.
-	{
-		uint32_t num_bright_pixel = 0;
-		for (int i = 0; i < minimalFrame.rows; i++)
-		{
-			uint8_t* data = minimalFrame.row(i).data;
-			for (int j = 0; j < minimalFrame.cols; j++)
-				if (data[j] > _brightness_threshold)
-					num_bright_pixel++;
-		}
-		double bright_pixel_ratio = double(num_bright_pixel) / (minimalFrame.rows * minimalFrame.cols);
-		//std::cout << bright_pixel_ratio << std::endl;
-		if (bright_pixel_ratio < _bright_pixel_ratio_low || bright_pixel_ratio > _bright_pixel_ratio_high)
-			return true;
-	}
-
-	return false;
 }
 
 bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
@@ -53,48 +25,15 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 	uint32_t bbox_row0 = uint32_t(bbox_y0 * double(game_img.rows) + 0.5);
 	uint32_t bbox_row1 = uint32_t(bbox_y1 * double(game_img.rows) + 0.5);
 
-	if (EarlyOutTest(game_img, bbox_col0, bbox_col1, bbox_row0, bbox_row1))
+	cv::Mat img = game_img(cv::Rect(bbox_col0, bbox_row0, bbox_col1 - bbox_col0, bbox_row1 - bbox_row0));
+	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.15, .pixel_ratio_upper = 0.23}
+	};
+	if (!Detector::GreyscaleTest(img, crit))
 		return false;
 
-	// shrink the whole bbox frame to make OCR faster
-	cv::Mat bbox_frame;
-	double scale_factor = 1;// std::max(game_img.cols / 640.0, 1.0);	// according to experiments, it's still possible to recognize the item with high accuracy when the width of the game screen is 480.
-	cv::resize(game_img(cv::Rect(bbox_col0, bbox_row0, bbox_col1 - bbox_col0, bbox_row1 - bbox_row0)), bbox_frame, cv::Size(int((bbox_col1 - bbox_col0) / scale_factor), int((bbox_row1 - bbox_row0) / scale_factor)));
+	double scale_factor = 1;
+	std::string ret = Detector::OCR(game_img(cv::Rect(bbox_col0, bbox_row0, bbox_col1 - bbox_col0, bbox_row1 - bbox_row0)), scale_factor, 180, 255, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
-	cv::cvtColor(bbox_frame, bbox_frame, cv::COLOR_BGR2GRAY);
-	for (int i = 0; i < bbox_frame.rows; i++)
-	{
-		uint8_t lower = 180;
-		uint8_t upper = 255;
-		uint8_t* data = bbox_frame.row(i).data;
-		for (int j = 0; j < bbox_frame.cols; j++)
-			data[j] = uint8_t(((std::clamp(data[j], lower, upper) -  lower) * 255.0 + 0.5) / (upper - lower));
-	}
-	cv::cvtColor(bbox_frame, bbox_frame, cv::COLOR_GRAY2BGRA);
-	//cv::imwrite("item.png", bbox_frame);
-
-	util::OpenCvMatBGRAToLeptonicaRGBAInplace(bbox_frame);
-
-	// construct the PIX struct
-	PIX* pix = pixCreateHeader(bbox_frame.cols, bbox_frame.rows, 32);
-	pixSetDimensions(pix, bbox_frame.cols, bbox_frame.rows, 32);
-	pixSetWpl(pix, bbox_frame.cols);
-	pixSetSpp(pix, 4);
-	pixSetData(pix, (l_uint32*)bbox_frame.data);
-
-	// OCR
-	_tess_api.SetImage(pix);
-	_tess_api.Recognize(0);
-
-	pixSetData(pix, nullptr);
-	pixDestroy(&pix);
-
-	std::string ret = std::unique_ptr<char[]>(_tess_api.GetUTF8Text()).get();
-
-	// OCR text from tesseract sometimes ends with '\n', trim that
-	if (ret.size() && ret[ret.size() - 1] == '\n')
-		ret = ret.substr(0, ret.size() - 1);
-
-	//std::cout << ret << std::endl;
 	return ret == "Sheikah Tower activated.";
 }

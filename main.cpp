@@ -58,13 +58,12 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 
 	std::string lang = "eng";
 
-	// location detector uses it's own tesseract api instance
-	LocationDetector location_detector;
-	if (!location_detector.Init(lang.c_str()))
-		return;
-
 	TesseractAPI shared_tess_api;
 	if (!shared_tess_api.Init(lang.c_str()))
+		return;
+
+	LocationDetector location_detector(shared_tess_api.API());
+	if (!location_detector.Init(lang.c_str()))
 		return;
 
 	ItemDetector item_detector(shared_tess_api.API());
@@ -225,7 +224,7 @@ int main(int argc, char* argv[])
 			if (uint32_t(overriden_num_threads) > num_threads)
 			{
 				overriden_num_threads = num_threads;
-				std::cout << "num_threads value '" << itor->second << "' in " << yaml_path.string() << " to large. Clamping to number of CPU cores - 1." << std::endl;
+				std::cout << "num_threads value '" << itor->second << "' in " << yaml_path.string() << " too large. Clamping to number of CPU cores - 1." << std::endl;
 			}
 			num_threads = uint32_t(overriden_num_threads);
 		}
