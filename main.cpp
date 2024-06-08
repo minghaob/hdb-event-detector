@@ -10,21 +10,68 @@
 #include "config.h"
 #include "scheduler.h"
 
+class TesseractAPI
+{
+private:
+	tesseract::TessBaseAPI _api;
+
+public:
+	bool Init(const char* lang)
+	{
+		if (_api.Init(".", lang))
+		{
+			std::cout << "OCRTesseract: Could not initialize tesseract." << std::endl;
+			return false;
+		}
+
+		// use single line mode
+		_api.SetPageSegMode(tesseract::PageSegMode::PSM_SINGLE_LINE);
+
+		// limit to these characters
+		if (std::string_view(lang) == "eng")
+		{
+			if (!_api.SetVariable("tessedit_char_whitelist", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.'- "))
+				return false;
+		}
+		// ignore extra space at the end of the line without any text, doesn't seem to make much difference though
+		if (!_api.SetVariable("gapmap_use_ends", "true"))
+			return false;
+
+		return true;
+	}
+
+	TesseractAPI() = default;
+	~TesseractAPI()
+	{
+		_api.Clear();
+	}
+
+	tesseract::TessBaseAPI& API()
+	{
+		return _api;
+	}
+};
+
 void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector<IntraFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
 {
 	::SetThreadGroupAffinity(::GetCurrentThread(), thread_affinity, nullptr);
 
 	std::string lang = "eng";
 
+	// location detector uses it's own tesseract api instance
 	LocationDetector location_detector;
 	if (!location_detector.Init(lang.c_str()))
 		return;
 
-	ItemDetector item_detector;
+	TesseractAPI shared_tess_api;
+	if (!shared_tess_api.Init(lang.c_str()))
+		return;
+
+	ItemDetector item_detector(shared_tess_api.API());
 	if (!item_detector.Init(lang.c_str()))
 		return;
 
-	TowerActivationDetector tower_detector;
+	TowerActivationDetector tower_detector(shared_tess_api.API());
 	if (!tower_detector.Init(lang.c_str()))
 		return;
 

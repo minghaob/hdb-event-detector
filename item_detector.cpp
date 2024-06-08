@@ -1,26 +1,12 @@
 #include "item_detector.h"
 
+ItemDetector::ItemDetector(tesseract::TessBaseAPI& api)
+	: _tess_api(api)
+{
+}
+
 bool ItemDetector::Init(const char* lang)
 {
-	if (_tess_api.Init(".", lang))
-	{
-		std::cout << "OCRTesseract: Could not initialize tesseract." << std::endl;
-		return false;
-	}
-
-	// items are always on one line
-	_tess_api.SetPageSegMode(tesseract::PageSegMode::PSM_SINGLE_LINE);
-
-	// these are the possible characters in item names in the English version of the game
-	if (std::string_view(lang) == "eng")
-	{
-		if (!_tess_api.SetVariable("tessedit_char_whitelist", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- "))
-			return false;
-	}
-	// ignore extra space at the end of the line without any text, doesn't seem to make much difference though
-	if (!_tess_api.SetVariable("gapmap_use_ends", "true"))
-		return false;
-
 	if (!InitItemList(lang))
 		return false;
 
@@ -143,9 +129,4 @@ std::string ItemDetector::GetItem(const cv::Mat& game_img)
 		ret = ret.substr(0, ret.size() - 1);
 
 	return FindBestMatch(ret);
-}
-
-ItemDetector::~ItemDetector()
-{
-	_tess_api.Clear();
 }

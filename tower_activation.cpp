@@ -1,25 +1,12 @@
 #include "tower_activation.h"
 
+TowerActivationDetector::TowerActivationDetector(tesseract::TessBaseAPI& api)
+	: _tess_api(api)
+{
+}
+
 bool TowerActivationDetector::Init(const char* lang)
 {
-	if (_tess_api.Init(".", lang))
-	{
-		std::cout << "OCRTesseract: Could not initialize tesseract." << std::endl;
-		return false;
-	}
-
-	// items are always on one line
-	_tess_api.SetPageSegMode(tesseract::PageSegMode::PSM_SINGLE_LINE);
-
-	if (std::string_view(lang) == "eng")
-	{
-		if (!_tess_api.SetVariable("tessedit_char_whitelist", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. "))
-			return false;
-	}
-	// ignore extra space at the end of the line without any text, doesn't seem to make much difference though
-	if (!_tess_api.SetVariable("gapmap_use_ends", "true"))
-		return false;
-
 	return true;
 }
 
@@ -110,9 +97,4 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 
 	//std::cout << ret << std::endl;
 	return ret == "Sheikah Tower activated.";
-}
-
-TowerActivationDetector::~TowerActivationDetector()
-{
-	_tess_api.Clear();
 }

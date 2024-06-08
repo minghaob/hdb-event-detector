@@ -5,11 +5,11 @@
 class TowerActivationDetector
 {
 private:
-	tesseract::TessBaseAPI _tess_api;
+	tesseract::TessBaseAPI &_tess_api;
 
 public:
-	TowerActivationDetector() = default;
-	~TowerActivationDetector();
+	TowerActivationDetector(tesseract::TessBaseAPI &api);
+	~TowerActivationDetector() = default;
 	bool Init(const char* lang);
 
 	// returns true if has tower activation dialog

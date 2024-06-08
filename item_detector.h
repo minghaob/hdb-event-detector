@@ -5,7 +5,7 @@
 class ItemDetector
 {
 private:
-	tesseract::TessBaseAPI _tess_api;
+	tesseract::TessBaseAPI &_tess_api;
 	std::vector<std::string> _items;
 
 private:
@@ -15,8 +15,8 @@ private:
 	std::string FindBestMatch(const std::string& str);
 
 public:
-	ItemDetector() = default;
-	~ItemDetector();
+	ItemDetector(tesseract::TessBaseAPI &api);
+	~ItemDetector() = default;
 	bool Init(const char* lang);
 
 	// returns empty string if nothing is detected

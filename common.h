@@ -31,8 +31,6 @@
 #pragma comment(lib, "lzma.lib")
 #pragma comment(lib, "tesseract53d.lib")
 #pragma comment(lib, "tiffd.lib")
-//#pragma comment(lib, "webpd.lib")
-//#pragma comment(lib, "webpdecoderd.lib")
 #pragma comment(lib, "zlibd.lib")
 #pragma comment(lib, "zstd.lib")
 #else
@@ -48,8 +46,6 @@
 #pragma comment(lib, "lzma.lib")
 #pragma comment(lib, "tesseract53.lib")
 #pragma comment(lib, "tiff.lib")
-//#pragma comment(lib, "webp.lib")
-//#pragma comment(lib, "webpdecoder.lib")
 #pragma comment(lib, "zlib.lib")
 #pragma comment(lib, "zstd.lib")
 #endif
