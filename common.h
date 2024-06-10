@@ -83,6 +83,7 @@ enum class IntraFrameEventType : uint8_t
 	Korok,
 	SpiritOrb,
 	TowerActivation,
+	TravelButton,
 	LoadingScreen,
 	AlbumPage,
 	Talus,

@@ -74,6 +74,10 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 	if (!tower_detector.Init(lang.c_str()))
 		return;
 
+	TravelDetector travel_detector(shared_tess_api.API());
+	if (!travel_detector.Init(lang.c_str()))
+		return;
+
 	cv::VideoCapture cap(video_file);
 	if (cap.isOpened())
 	{
@@ -154,6 +158,14 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 							.frame_number = cur_frame,
 							.type = IntraFrameEventType::TowerActivation,
 					});
+				}
+
+				if (travel_detector.IsTravelButtonPresent(frame(game_rect)))
+				{
+					outEvents.push_back({
+							.frame_number = cur_frame,
+							.type = IntraFrameEventType::TravelButton,
+						});
 				}
 
 				num_frame_parsed++;
@@ -301,6 +313,7 @@ int main(int argc, char* argv[])
 		int32_t last_korok_frame = -1;
 		int32_t last_spirit_orb_frame = -1;
 		int32_t last_tower_activation_frame = -1;
+		int32_t last_travel_button_frame = -1;
 		std::multimap<uint32_t, std::string > all_events;
 		for (const auto& event : merged_events)
 		{
@@ -334,9 +347,18 @@ int main(int argc, char* argv[])
 				}
 				last_tower_activation_frame = event.second.frame_number;
 			}
+			if (event.second.type == IntraFrameEventType::TravelButton)
+			{
+				if (last_travel_button_frame < 0 || uint32_t(last_travel_button_frame + 90) <= event.second.frame_number)
+				{
+					//printf("[%d] Sheikah Tower activated.\n", event.second.frame_number);
+					all_events.emplace(event.second.frame_number, "Travel");
+					event_counter.try_emplace("Travel", 0).first->second++;
+				}
+				last_travel_button_frame = event.second.frame_number;
+			}
 		}
 
-		if (yaml_file_path.filename() == "run.yaml")
 		{
 			std::ostringstream os;
 			os << "---" << std::endl;
@@ -345,11 +367,16 @@ int main(int argc, char* argv[])
 				os << "  - [" << itor.first << ", \"" << itor.second << "\"]" << std::endl;
 
 			fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
-			std::ofstream ofs(raw_path.string());
-			if (!ofs.is_open())
-				std::cout << os.str();
+			if (yaml_file_path.filename() == "run.yaml")
+			{
+				std::ofstream ofs(raw_path.string());
+				if (!ofs.is_open())
+					std::cout << os.str();
+				else
+					ofs << os.str();
+			}
 			else
-				ofs << os.str();
+				std::cout << os.str();
 		}
 	}
 
