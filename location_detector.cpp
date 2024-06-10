@@ -71,20 +71,12 @@ std::string LocationDetector::FindBestLocationMatch(const std::string& loc_in)
 
 std::string LocationDetector::GetLocation(const cv::Mat& game_img)
 {
-	// This is the bounding box of the longest location text in the lower left corner of the game screen.
-	constexpr double bbox_x0 = 0.038461538461;
-	constexpr double bbox_x1 = 0.502652519893;
-	constexpr double bbox_y0 = 0.838443396226;
-	constexpr double bbox_y1 = 0.926886792452;
-
-	// get the bounding box in rows / cols
-	uint32_t bbox_col0 = uint32_t(bbox_x0 * double(game_img.cols) + 0.5);
-	uint32_t bbox_col1 = uint32_t(bbox_x1 * double(game_img.cols) + 0.5);
-	uint32_t bbox_row0 = uint32_t(bbox_y0 * double(game_img.rows) + 0.5);
-	uint32_t bbox_row1 = uint32_t(bbox_y1 * double(game_img.rows) + 0.5);
+	cv::Rect rect = Detector::BBoxConversion<49, 644, 603, 667>(game_img.cols, game_img.rows);
 
 	// Peek the left-most quarter of the location frame, the shorted location name is "Docks", which is about this wide
-	cv::Mat img = game_img(cv::Rect(bbox_col0, bbox_row0, (bbox_col1 - bbox_col0) / 4, bbox_row1 - bbox_row0));
+	cv::Rect rect_test = rect;
+	rect_test.width /= 4;
+	cv::Mat img = game_img(rect_test);
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 		{.brightness_range_lower = 241, .brightness_range_upper = 255, .pixel_ratio_lower = 0.15, .pixel_ratio_upper = 0.3}
 	};
@@ -92,7 +84,7 @@ std::string LocationDetector::GetLocation(const cv::Mat& game_img)
 		return "";
 
 	double scale_factor = std::max(game_img.cols / 480.0, 1.0);	// according to experiments, it's still possible to recognize the location with high accuracy when the width of the game screen is 480.
-	std::string ret = Detector::OCR(game_img(cv::Rect(bbox_col0, bbox_row0, bbox_col1 - bbox_col0, bbox_row1 - bbox_row0)), scale_factor, 180, 255, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
+	std::string ret = Detector::OCR(game_img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
 
 	// some post-process
 	{
@@ -102,9 +94,9 @@ std::string LocationDetector::GetLocation(const cv::Mat& game_img)
 		int letter_x0, letter_y0, letter_x1, letter_y1;
 		if (!(boxesstream >> letter >> letter_x0 >> letter_y0 >> letter_x1 >> letter_y1))
 			return "";
-		if (letter_x0 > int(bbox_row1 - bbox_row0) / 2)		// text not starting from the left side of the location frame, one possibility is that dialog text is recognized (right side of the location bounding-box overlaps with the dialog box)
+		if (letter_x0 > rect.width / 2)		// text not starting from the left side of the location frame, one possibility is that dialog text is recognized (right side of the location bounding-box overlaps with the dialog box)
 			return "";
-		if (letter_x1 - letter_x0 > int(bbox_row1 - bbox_row0))	// text bounding box is weird-shaped
+		if (letter_x1 - letter_x0 > rect.height)	// letter bounding box is weird-shaped (width > height)
 			return "";
 	}
 

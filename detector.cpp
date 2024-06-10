@@ -1,6 +1,6 @@
 #include "detector.h"
 
-std::string Detector::OCR(const cv::Mat& input, double scale_factor, uint8_t greyscale_lower, uint8_t greyscale_upper, tesseract::TessBaseAPI& tess_api, const char* char_whitelist)
+std::string Detector::OCR(const cv::Mat& input, double scale_factor, uint8_t greyscale_lower, uint8_t greyscale_upper, bool invert_color, tesseract::TessBaseAPI& tess_api, const char* char_whitelist)
 {
 	cv::Mat bbox_frame;
 	cv::resize(input, bbox_frame, cv::Size(int(input.cols / scale_factor), int(input.rows / scale_factor)));
@@ -12,7 +12,12 @@ std::string Detector::OCR(const cv::Mat& input, double scale_factor, uint8_t gre
 		uint8_t upper = greyscale_upper;
 		uint8_t* data = bbox_frame.row(i).data;
 		for (int j = 0; j < bbox_frame.cols; j++)
-			data[j] = 255 - uint8_t(uint32_t(std::clamp(data[j], lower, upper) - lower) * 255 / (upper - lower));
+			data[j] = uint8_t(uint32_t(std::clamp(data[j], lower, upper) - lower) * 255 / (upper - lower));
+		if (invert_color)
+		{
+			for (int j = 0; j < bbox_frame.cols; j++)
+				data[j] = 255 - data[j];
+		}
 	}
 	cv::cvtColor(bbox_frame, bbox_frame, cv::COLOR_GRAY2BGRA);
 
@@ -75,3 +80,4 @@ bool Detector::GreyscaleTest(const cv::Mat& img, const std::vector<GreyScaleTest
 
 	return true;
 }
+
