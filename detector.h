@@ -15,6 +15,7 @@ public:
 	};
 public:
 	static bool GreyscaleTest(const cv::Mat& img, const std::vector<GreyScaleTestCriteria>& criteria);
+	static void GreyscaleAccHistogram(const cv::Mat& img, std::array<uint32_t, 256> &pix_count);
 	static std::string OCR(const cv::Mat& input, double scale_factor, uint8_t greyscale_lower, uint8_t greyscale_upper, bool invert_color, tesseract::TessBaseAPI& tess_api, const char* char_whitelist);
 
 	template<uint32_t left, uint32_t right, uint32_t top, uint32_t bottom, uint32_t orig_width = 1280, uint32_t orig_height = 720>

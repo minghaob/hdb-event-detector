@@ -9,6 +9,7 @@
 #include "tower_activation.h"
 #include "config.h"
 #include "scheduler.h"
+#include "inter_assembler.h"
 
 class TesseractAPI
 {
@@ -76,6 +77,10 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 
 	TravelDetector travel_detector(shared_tess_api.API());
 	if (!travel_detector.Init(lang.c_str()))
+		return;
+
+	BlackWhiteLoadScreenDetector bwl_detector(shared_tess_api.API());
+	if (!bwl_detector.Init(lang.c_str()))
 		return;
 
 	cv::VideoCapture cap(video_file);
@@ -166,6 +171,15 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 							.frame_number = cur_frame,
 							.type = IntraFrameEventType::TravelButton,
 						});
+				}
+
+				{
+					IntraFrameEvent evt = bwl_detector.GetEvent(frame(game_rect));
+					if (evt.type != IntraFrameEventType::None)
+					{
+						evt.frame_number = cur_frame;
+						outEvents.push_back(evt);
+					}
 				}
 
 				num_frame_parsed++;
@@ -314,48 +328,16 @@ int main(int argc, char* argv[])
 		int32_t last_spirit_orb_frame = -1;
 		int32_t last_tower_activation_frame = -1;
 		int32_t last_travel_button_frame = -1;
+		int32_t last_load_frame = -1;
 		std::multimap<uint32_t, std::string > all_events;
+		SimpleInterFrameEventAssembler simple_event_assembler;
 		for (const auto& event : merged_events)
 		{
-			if (event.second.type == IntraFrameEventType::Korok)
+			InterFrameEvent evt = simple_event_assembler.OnNextIntraFrameEvent(event.second);
+			if (evt.message.size())
 			{
-				if (last_korok_frame < 0 || uint32_t(last_korok_frame + 90) <= event.second.frame_number)
-				{
-					//printf("[%d] Korok Seed\n", event.second.frame_number);
-					all_events.emplace(event.second.frame_number, "Korok Seed");
-					event_counter.try_emplace("Korok Seed", 0).first->second++;
-				}
-				last_korok_frame = event.second.frame_number;
-			}
-			if (event.second.type == IntraFrameEventType::SpiritOrb)
-			{
-				if (last_spirit_orb_frame < 0 || uint32_t(last_spirit_orb_frame + 90) <= event.second.frame_number)
-				{
-					//printf("[%d] Spirit Orb\n", event.second.frame_number);
-					all_events.emplace(event.second.frame_number, "Spirit Orb");
-					event_counter.try_emplace("Spirit Orb", 0).first->second++;
-				}
-				last_spirit_orb_frame = event.second.frame_number;
-			}
-			if (event.second.type == IntraFrameEventType::TowerActivation)
-			{
-				if (last_tower_activation_frame < 0 || uint32_t(last_tower_activation_frame + 90) <= event.second.frame_number)
-				{
-					//printf("[%d] Sheikah Tower activated.\n", event.second.frame_number);
-					all_events.emplace(event.second.frame_number, "Sheikah Tower activated.");
-					event_counter.try_emplace("Sheikah Tower activated.", 0).first->second++;
-				}
-				last_tower_activation_frame = event.second.frame_number;
-			}
-			if (event.second.type == IntraFrameEventType::TravelButton)
-			{
-				if (last_travel_button_frame < 0 || uint32_t(last_travel_button_frame + 90) <= event.second.frame_number)
-				{
-					//printf("[%d] Sheikah Tower activated.\n", event.second.frame_number);
-					all_events.emplace(event.second.frame_number, "Travel");
-					event_counter.try_emplace("Travel", 0).first->second++;
-				}
-				last_travel_button_frame = event.second.frame_number;
+				all_events.emplace(evt.frame_number, evt.message);
+				event_counter.try_emplace(std::string(evt.message), 0).first->second++;
 			}
 		}
 

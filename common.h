@@ -80,17 +80,22 @@ namespace util
 
 enum class IntraFrameEventType : uint8_t
 {
+	None,
 	Korok,
 	SpiritOrb,
 	TowerActivation,
 	TravelButton,
 	LoadingScreen,
+	BlackScreen,
+	WhiteScreen,
 	AlbumPage,
 	Talus,
 	Hinox,
 	Molduga,
 	ZoraMonument,
 	Dialog,
+
+	Max,
 };
 
 struct IntraFrameEvent
@@ -120,4 +125,10 @@ struct IntraFrameEvent
 			uint8_t npc_id;
 		} dialog_data;
 	};
+};
+
+struct InterFrameEvent
+{
+	uint32_t frame_number;
+	std::string_view message;
 };

@@ -1,15 +1,6 @@
 #include "tower_activation.h"
 #include "detector.h"
 
-TowerActivationDetector::TowerActivationDetector(tesseract::TessBaseAPI& api)
-	: _tess_api(api)
-{
-}
-
-bool TowerActivationDetector::Init(const char* lang)
-{
-	return true;
-}
 
 bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 {
@@ -26,17 +17,6 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 	std::string ret = Detector::OCR(game_img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
 	return ret == "Sheikah Tower activated.";
-}
-
-
-TravelDetector::TravelDetector(tesseract::TessBaseAPI& api)
-	: _tess_api(api)
-{
-}
-
-bool TravelDetector::Init(const char* lang)
-{
-	return true;
 }
 
 bool TravelDetector::IsTravelButtonPresent(const cv::Mat& game_img)
@@ -62,4 +42,39 @@ bool TravelDetector::IsTravelButtonPresent(const cv::Mat& game_img)
 	std::string ret = Detector::OCR(game_img(rect_middle), scale_factor, 140, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
 	return ret == "Travel";
+}
+
+IntraFrameEvent BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
+{
+	IntraFrameEvent ret{ .type = IntraFrameEventType::None };
+
+	// these two bounding boxes are very conservative because many run videos have overlays at the corners
+	cv::Rect rect_top = Detector::BBoxConversion<300, 950, 50, 250>(game_img.cols, game_img.rows);
+	cv::Rect rect_bottom = Detector::BBoxConversion<480, 950, 320, 600>(game_img.cols, game_img.rows);
+
+	std::array<uint32_t, 256> pixel_count;
+	Detector::GreyscaleAccHistogram(game_img(rect_top), pixel_count);
+	bool top_all_black = (pixel_count[5] == uint32_t(rect_top.area()));
+	bool top_all_white = (pixel_count[248] == 0);
+	if (!top_all_black && !top_all_white)
+		return { .type = IntraFrameEventType::None };
+
+	Detector::GreyscaleAccHistogram(game_img(rect_bottom), pixel_count);
+	bool bottom_all_black = (pixel_count[5] == uint32_t(rect_bottom.area()));
+	bool bottom_all_white = (pixel_count[248] == 0);
+
+	if (top_all_black)
+	{
+		if (bottom_all_black)
+			return { .type = IntraFrameEventType::BlackScreen };
+	}
+	else if (top_all_white)
+	{
+		if (bottom_all_black)
+			return { .type = IntraFrameEventType::LoadingScreen };
+		else if (bottom_all_white)
+			return { .type = IntraFrameEventType::WhiteScreen };
+	}
+
+	return { .type = IntraFrameEventType::None };
 }

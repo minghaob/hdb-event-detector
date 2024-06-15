@@ -50,30 +50,35 @@ std::string Detector::OCR(const cv::Mat& input, double scale_factor, uint8_t gre
 	return ret;
 }
 
+void Detector::GreyscaleAccHistogram(const cv::Mat& img, std::array<uint32_t, 256> &pix_count)
+{
+	cv::Mat grey_image;
+	cv::cvtColor(img, grey_image, cv::COLOR_BGR2GRAY);		// converting to gray
+
+	pix_count.fill(0);
+	for (int i = 0; i < grey_image.rows; i++)
+	{
+		uint8_t* data = grey_image.row(i).data;
+		for (int j = 0; j < grey_image.cols; j++)
+			pix_count[data[j]]++;
+	}
+	for (int i = 1; i <= 255; i++)
+		pix_count[i] += pix_count[i - 1];
+}
+
 bool Detector::GreyscaleTest(const cv::Mat& img, const std::vector<GreyScaleTestCriteria> &criteria)
 {
-	cv::Mat minimalFrame;
-	cv::cvtColor(img, minimalFrame, cv::COLOR_BGR2GRAY);		// converting to gray
-
 	// scan the image
-	std::vector<uint32_t> numPixel(criteria.size(), 0);
-	for (int i = 0; i < minimalFrame.rows; i++)
-	{
-		uint8_t* data = minimalFrame.row(i).data;
-		for (int j = 0; j < minimalFrame.cols; j++)
-		{
-			for (size_t k = 0; k < criteria.size(); k++)
-			{
-				if (data[j] >= criteria[k].brightness_range_lower && data[j] <= criteria[k].brightness_range_upper)
-					numPixel[k]++;
-			}
-		}
-	}
+	std::array<uint32_t, 256> count;
+	GreyscaleAccHistogram(img, count);
 
 	// check pixel ratio
 	for (size_t i = 0; i < criteria.size(); i++)
 	{
-		double pixel_ratio = double(numPixel[i]) / (minimalFrame.rows * minimalFrame.cols);
+		uint32_t num_pixel = count[criteria[i].brightness_range_upper];
+		if (criteria[i].brightness_range_lower > 0)
+			num_pixel -= count[criteria[i].brightness_range_lower - 1];
+		double pixel_ratio = double(num_pixel) / (img.rows * img.cols);
 		if (pixel_ratio < criteria[i].pixel_ratio_lower || pixel_ratio > criteria[i].pixel_ratio_upper)
 			return false;
 	}
