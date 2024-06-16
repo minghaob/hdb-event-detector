@@ -44,9 +44,9 @@ bool TravelDetector::IsTravelButtonPresent(const cv::Mat& game_img)
 	return ret == "Travel";
 }
 
-IntraFrameEvent BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
+SingleFrameEventData BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
 {
-	IntraFrameEvent ret{ .type = IntraFrameEventType::None };
+	SingleFrameEventData ret{ .type = SingleFrameEventType::None };
 
 	// these two bounding boxes are very conservative because many run videos have overlays at the corners
 	cv::Rect rect_top = Detector::BBoxConversion<300, 950, 50, 250>(game_img.cols, game_img.rows);
@@ -57,7 +57,7 @@ IntraFrameEvent BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
 	bool top_all_black = (pixel_count[5] == uint32_t(rect_top.area()));
 	bool top_all_white = (pixel_count[248] == 0);
 	if (!top_all_black && !top_all_white)
-		return { .type = IntraFrameEventType::None };
+		return { .type = SingleFrameEventType::None };
 
 	Detector::GreyscaleAccHistogram(game_img(rect_bottom), pixel_count);
 	bool bottom_all_black = (pixel_count[5] == uint32_t(rect_bottom.area()));
@@ -66,15 +66,15 @@ IntraFrameEvent BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
 	if (top_all_black)
 	{
 		if (bottom_all_black)
-			return { .type = IntraFrameEventType::BlackScreen };
+			return { .type = SingleFrameEventType::BlackScreen };
 	}
 	else if (top_all_white)
 	{
 		if (bottom_all_black)
-			return { .type = IntraFrameEventType::LoadingScreen };
+			return { .type = SingleFrameEventType::LoadingScreen };
 		else if (bottom_all_white)
-			return { .type = IntraFrameEventType::WhiteScreen };
+			return { .type = SingleFrameEventType::WhiteScreen };
 	}
 
-	return { .type = IntraFrameEventType::None };
+	return { .type = SingleFrameEventType::None };
 }

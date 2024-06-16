@@ -74,4 +74,4 @@ std::string SecondToTimeString(uint32_t sec)
 
 }
 
-static_assert(sizeof(IntraFrameEvent) == 8);
+static_assert(sizeof(SingleFrameEvent) == 8);

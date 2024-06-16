@@ -57,5 +57,5 @@ public:
 	}
 
 	// returns true if travel button is present
-	IntraFrameEvent GetEvent(const cv::Mat& game_img);
+	SingleFrameEventData GetEvent(const cv::Mat& game_img);
 };

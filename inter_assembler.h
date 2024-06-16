@@ -1,13 +1,9 @@
 #pragma once
 #include "common.h"
 
-class SimpleInterFrameEventAssembler
+class RepeatingSingleFrameEventDeduper
 {
-	std::array<int32_t, uint32_t(IntraFrameEventType::Max)> _last_frame;
-
 public:
-	SimpleInterFrameEventAssembler();
-	
-	InterFrameEvent OnNextIntraFrameEvent(const IntraFrameEvent& e);
-	InterFrameEvent OnIntraFrameEventStreamEnd(const IntraFrameEvent& e);
+	static void Dedup(const std::multimap<uint32_t, SingleFrameEvent>& events, std::set<SingleFrameEventWithDuration>& out_deduped_events);
+	static std::string_view GetMsg(SingleFrameEventType t);
 };

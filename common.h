@@ -78,7 +78,7 @@ namespace util
 	std::string SecondToTimeString(uint32_t sec);
 }
 
-enum class IntraFrameEventType : uint8_t
+enum class SingleFrameEventType : uint8_t
 {
 	None,
 	Korok,
@@ -98,24 +98,14 @@ enum class IntraFrameEventType : uint8_t
 	Max,
 };
 
-struct IntraFrameEvent
+struct SingleFrameEventData
 {
-	uint32_t frame_number;
-	IntraFrameEventType type;
+	SingleFrameEventType type;
 	union {
 		struct {
 			uint8_t num_shrines;
 			uint8_t num_koroks;
 		} loadscreen_data;
-		struct {
-			uint8_t talus_id;
-		} talus_data;
-		struct {
-			uint8_t hinox_id;
-		} hinox_data;
-		struct {
-			uint8_t molduga_id;
-		} molduga_data;
 		struct {
 			uint8_t monument_id;
 		} monument_data;
@@ -125,10 +115,38 @@ struct IntraFrameEvent
 			uint8_t npc_id;
 		} dialog_data;
 	};
+	bool operator==(const SingleFrameEventData& other) const
+	{
+		if (type != other.type)
+			return false;
+		switch (type)
+		{
+		case SingleFrameEventType::ZoraMonument:
+			return monument_data.monument_id == other.monument_data.monument_id;
+		case SingleFrameEventType::Dialog:
+			return dialog_data.npc_id == other.dialog_data.npc_id
+				&& dialog_data.dialog_id == other.dialog_data.dialog_id
+				&& dialog_data.quest_id == other.dialog_data.quest_id;
+			break;
+		default:
+			return true;
+		}
+	}
 };
 
-struct InterFrameEvent
+struct SingleFrameEvent
 {
 	uint32_t frame_number;
-	std::string_view message;
+	SingleFrameEventData data;
+};
+
+struct SingleFrameEventWithDuration
+{
+	SingleFrameEvent evt;
+	uint32_t duration;
+
+	bool operator<(const SingleFrameEventWithDuration& other) const
+	{
+		return std::tie(evt.frame_number, duration, evt.data.type) < std::tie(other.evt.frame_number, other.duration, other.evt.data.type);
+	}
 };

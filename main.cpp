@@ -53,7 +53,7 @@ public:
 	}
 };
 
-void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector<IntraFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
+void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector<SingleFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
 {
 	::SetThreadGroupAffinity(::GetCurrentThread(), thread_affinity, nullptr);
 
@@ -145,14 +145,18 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					{
 						outEvents.push_back({
 							.frame_number = cur_frame,
-							.type = IntraFrameEventType::Korok,
+							.data = {
+								.type = SingleFrameEventType::Korok,
+							},
 						});
 					}
 					else if (item == "Spirit Orb")
 					{
 						outEvents.push_back({
 							.frame_number = cur_frame,
-							.type = IntraFrameEventType::SpiritOrb,
+							.data = {
+								.type = SingleFrameEventType::SpiritOrb,
+							},
 						});
 					}
 				}
@@ -160,25 +164,31 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				if (tower_detector.IsActivatingTower(frame(game_rect)))
 				{
 					outEvents.push_back({
-							.frame_number = cur_frame,
-							.type = IntraFrameEventType::TowerActivation,
+						.frame_number = cur_frame,
+						.data = {
+							.type = SingleFrameEventType::TowerActivation,
+						},
 					});
 				}
 
 				if (travel_detector.IsTravelButtonPresent(frame(game_rect)))
 				{
 					outEvents.push_back({
-							.frame_number = cur_frame,
-							.type = IntraFrameEventType::TravelButton,
-						});
+						.frame_number = cur_frame,
+						.data = {
+							.type = SingleFrameEventType::TravelButton,
+						},
+					});
 				}
 
 				{
-					IntraFrameEvent evt = bwl_detector.GetEvent(frame(game_rect));
-					if (evt.type != IntraFrameEventType::None)
+					SingleFrameEventData data = bwl_detector.GetEvent(frame(game_rect));
+					if (data.type != SingleFrameEventType::None)
 					{
-						evt.frame_number = cur_frame;
-						outEvents.push_back(evt);
+						outEvents.push_back({
+							.frame_number = cur_frame,
+							.data = data,
+						});
 					}
 				}
 
@@ -266,7 +276,7 @@ int main(int argc, char* argv[])
 
 	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
 	{
-		std::multimap<uint32_t, IntraFrameEvent> merged_events;
+		std::multimap<uint32_t, SingleFrameEvent> merged_events;
 
 		for (uint32_t j = 0; j < uint32_t(cfg.videos[i].segments.size()); j++)
 		{
@@ -274,7 +284,7 @@ int main(int argc, char* argv[])
 			scheduler.AllocateWorkBatch(cfg.videos[i].segments[j].start_frame, cfg.videos[i].segments[j].end_frame);
 			std::vector<std::thread> threads;
 			std::atomic<uint32_t> num_ended_thread = 0;
-			std::vector<std::vector<IntraFrameEvent>> events(num_threads);
+			std::vector<std::vector<SingleFrameEvent>> events(num_threads);
 			std::vector<uint32_t> num_frame_parsed(num_threads, 0);
 			for (uint32_t thd_idx = 0; thd_idx < num_threads; thd_idx++)
 			{
@@ -324,29 +334,21 @@ int main(int argc, char* argv[])
 					merged_events.emplace(event.frame_number, event);
 		}
 
-		int32_t last_korok_frame = -1;
-		int32_t last_spirit_orb_frame = -1;
-		int32_t last_tower_activation_frame = -1;
-		int32_t last_travel_button_frame = -1;
-		int32_t last_load_frame = -1;
-		std::multimap<uint32_t, std::string > all_events;
-		SimpleInterFrameEventAssembler simple_event_assembler;
-		for (const auto& event : merged_events)
+		std::set<SingleFrameEventWithDuration> deduped_events;
+
+		RepeatingSingleFrameEventDeduper::Dedup(merged_events, deduped_events);
+		for (const auto& evt : deduped_events)
 		{
-			InterFrameEvent evt = simple_event_assembler.OnNextIntraFrameEvent(event.second);
-			if (evt.message.size())
-			{
-				all_events.emplace(evt.frame_number, evt.message);
-				event_counter.try_emplace(std::string(evt.message), 0).first->second++;
-			}
+			std::string_view msg = RepeatingSingleFrameEventDeduper::GetMsg(evt.evt.data.type);
+			event_counter.try_emplace(std::string(msg), 0).first->second++;
 		}
 
 		{
 			std::ostringstream os;
 			os << "---" << std::endl;
 			os << "events:" << std::endl;
-			for (const auto& itor : all_events)
-				os << "  - [" << itor.first << ", \"" << itor.second << "\"]" << std::endl;
+			for (const auto& itor : deduped_events)
+				os << "  - [" << itor.evt.frame_number << ", \"" << RepeatingSingleFrameEventDeduper::GetMsg(itor.evt.data.type) << "\"]" << std::endl;
 
 			fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
 			if (yaml_file_path.filename() == "run.yaml")
