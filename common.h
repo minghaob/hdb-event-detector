@@ -78,9 +78,11 @@ namespace util
 	std::string SecondToTimeString(uint32_t sec);
 }
 
-enum class SingleFrameEventType : uint8_t
+enum class EventType : uint8_t
 {
+	// single frame events
 	None,
+	SingleFrameEventBegin,
 	Korok,
 	SpiritOrb,
 	TowerActivation,
@@ -94,13 +96,23 @@ enum class SingleFrameEventType : uint8_t
 	Molduga,
 	ZoraMonument,
 	Dialog,
+	SingleFrameEventEnd,
+
+	// assembled events
+	AssembledEventBegin,
+	Load,			// = BlackScreen + LoadScreen + BlackScreen
+	Warp,			// = TravelButton + Load
+	Shrine,			// = Load + BlackScreen + BlackScreen + SpiritOrb + Load
+	Memory,			// = AlbumPage + WhiteScreen
+	DivineBeast,	// TODO
+	AssembledEventEnd,
 
 	Max,
 };
 
 struct SingleFrameEventData
 {
-	SingleFrameEventType type;
+	EventType type;
 	union {
 		struct {
 			uint8_t num_shrines;
@@ -121,9 +133,9 @@ struct SingleFrameEventData
 			return false;
 		switch (type)
 		{
-		case SingleFrameEventType::ZoraMonument:
+		case EventType::ZoraMonument:
 			return monument_data.monument_id == other.monument_data.monument_id;
-		case SingleFrameEventType::Dialog:
+		case EventType::Dialog:
 			return dialog_data.npc_id == other.dialog_data.npc_id
 				&& dialog_data.dialog_id == other.dialog_data.dialog_id
 				&& dialog_data.quest_id == other.dialog_data.quest_id;
@@ -140,13 +152,28 @@ struct SingleFrameEvent
 	SingleFrameEventData data;
 };
 
-struct SingleFrameEventWithDuration
+struct MultiFrameEvent
 {
 	SingleFrameEvent evt;
 	uint32_t duration;
 
-	bool operator<(const SingleFrameEventWithDuration& other) const
+	bool operator<(const MultiFrameEvent& other) const
 	{
 		return std::tie(evt.frame_number, duration, evt.data.type) < std::tie(other.evt.frame_number, other.duration, other.evt.data.type);
 	}
+
+	uint32_t LastFrame() const
+	{
+		return evt.frame_number + duration - 1;
+	}
+};
+
+struct AssembledEvent : public MultiFrameEvent
+{
+	AssembledEvent(const MultiFrameEvent &e)
+		: MultiFrameEvent(e)
+	{}
+	virtual uint32_t GetNumSubEvents() { return 0; }
+	virtual std::string_view GetSubEventName(uint32_t idx) { return ""; }
+	virtual uint32_t GetSubEventFrameOffset(uint32_t idx) { return 0; }
 };

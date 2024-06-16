@@ -146,7 +146,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 						outEvents.push_back({
 							.frame_number = cur_frame,
 							.data = {
-								.type = SingleFrameEventType::Korok,
+								.type = EventType::Korok,
 							},
 						});
 					}
@@ -155,7 +155,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 						outEvents.push_back({
 							.frame_number = cur_frame,
 							.data = {
-								.type = SingleFrameEventType::SpiritOrb,
+								.type = EventType::SpiritOrb,
 							},
 						});
 					}
@@ -166,7 +166,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					outEvents.push_back({
 						.frame_number = cur_frame,
 						.data = {
-							.type = SingleFrameEventType::TowerActivation,
+							.type = EventType::TowerActivation,
 						},
 					});
 				}
@@ -176,14 +176,14 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					outEvents.push_back({
 						.frame_number = cur_frame,
 						.data = {
-							.type = SingleFrameEventType::TravelButton,
+							.type = EventType::TravelButton,
 						},
 					});
 				}
 
 				{
 					SingleFrameEventData data = bwl_detector.GetEvent(frame(game_rect));
-					if (data.type != SingleFrameEventType::None)
+					if (data.type != EventType::None)
 					{
 						outEvents.push_back({
 							.frame_number = cur_frame,
@@ -334,12 +334,12 @@ int main(int argc, char* argv[])
 					merged_events.emplace(event.frame_number, event);
 		}
 
-		std::set<SingleFrameEventWithDuration> deduped_events;
+		std::vector<MultiFrameEvent> deduped_events;
 
-		RepeatingSingleFrameEventDeduper::Dedup(merged_events, deduped_events);
+		EventDeduper::Dedup(merged_events, deduped_events);
 		for (const auto& evt : deduped_events)
 		{
-			std::string_view msg = RepeatingSingleFrameEventDeduper::GetMsg(evt.evt.data.type);
+			std::string_view msg = EventDeduper::GetMsg(evt.evt.data.type);
 			event_counter.try_emplace(std::string(msg), 0).first->second++;
 		}
 
@@ -348,9 +348,45 @@ int main(int argc, char* argv[])
 			os << "---" << std::endl;
 			os << "events:" << std::endl;
 			for (const auto& itor : deduped_events)
-				os << "  - [" << itor.evt.frame_number << ", \"" << RepeatingSingleFrameEventDeduper::GetMsg(itor.evt.data.type) << "\"]" << std::endl;
+				os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << EventDeduper::GetMsg(itor.evt.data.type) << "\"]" << std::endl;
 
-			fs::path raw_path = yaml_path / ("raw_" + (i < 9 ? "0" + std::to_string(i + 1) : std::to_string(i + 1)) + ".yaml");		// raw files start at 01
+			fs::path raw_path = yaml_path / ("deduped_" + std::to_string(i) + ".yaml");		// raw files start at 01
+			if (yaml_file_path.filename() == "run.yaml")
+			{
+				std::ofstream ofs(raw_path.string());
+				if (!ofs.is_open())
+					std::cout << os.str();
+				else
+					ofs << os.str();
+			}
+			else
+				std::cout << os.str();
+		}
+
+		std::vector<std::shared_ptr<AssembledEvent>> assembled_events;
+		EventAssembler::Assemble(deduped_events, assembled_events);
+		{
+			std::ostringstream os;
+			os << "---" << std::endl;
+			os << "events:" << std::endl;
+			for (const auto& itor : assembled_events)
+			{
+				os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
+				os << "    type: \"" << EventDeduper::GetMsg(itor->evt.data.type) << "\"" << std::endl;
+				if (itor->GetNumSubEvents() > 0)
+				{
+					os << "    subevents: [";
+					for (uint32_t i = 0; i < itor->GetNumSubEvents(); i++)
+					{
+						if (i > 0)
+							os << ", ";
+						os << "[" << itor->GetSubEventFrameOffset(i) + itor->evt.frame_number << ", " << itor->GetSubEventName(i) << "]";
+					}
+					os << std::endl;
+				}
+			}
+
+			fs::path raw_path = yaml_path / ("assembled_" + std::to_string(i) + ".yaml");		// raw files start at 01
 			if (yaml_file_path.filename() == "run.yaml")
 			{
 				std::ofstream ofs(raw_path.string());
