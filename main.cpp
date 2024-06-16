@@ -9,7 +9,7 @@
 #include "tower_activation.h"
 #include "config.h"
 #include "scheduler.h"
-#include "inter_assembler.h"
+#include "deduper.h"
 
 class TesseractAPI
 {
