@@ -13,9 +13,9 @@ namespace __details
 		{ EventType::SpiritOrb,			90 },
 		{ EventType::TowerActivation,	90 },
 		{ EventType::TravelButton,		90 },
-		{ EventType::LoadingScreen,		2 },
-		{ EventType::BlackScreen,		2 },
-		{ EventType::WhiteScreen,		2 },
+		{ EventType::LoadingScreen,		5 },
+		{ EventType::BlackScreen,		5 },
+		{ EventType::WhiteScreen,		5 },
 	});
 
 	static consteval std::array<uint32_t, uint32_t(EventType::Max)> CreateMinimalSpacingArray()
@@ -32,7 +32,7 @@ namespace __details
 		{ EventType::SpiritOrb,			"Spirit Orb" },
 		{ EventType::TowerActivation,	"Sheikah Tower activated." },
 		{ EventType::TravelButton,		"Travel" },
-		{ EventType::LoadingScreen,		"Load Screen" },
+		{ EventType::LoadingScreen,		"Loading Screen" },
 		{ EventType::BlackScreen,		"Black Screen" },
 		{ EventType::WhiteScreen,		"White Screen" },
 		{ EventType::AlbumPage,			"Album Page" },

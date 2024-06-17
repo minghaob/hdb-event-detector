@@ -49,19 +49,19 @@ SingleFrameEventData BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_
 	SingleFrameEventData ret{ .type = EventType::None };
 
 	// these two bounding boxes are very conservative because many run videos have overlays at the corners
-	cv::Rect rect_top = Detector::BBoxConversion<300, 950, 50, 250>(game_img.cols, game_img.rows);
-	cv::Rect rect_bottom = Detector::BBoxConversion<480, 950, 320, 600>(game_img.cols, game_img.rows);
+	cv::Rect rect_top = Detector::BBoxConversion<300, 900, 50, 230>(game_img.cols, game_img.rows);
+	cv::Rect rect_bottom = Detector::BBoxConversion<480, 950, 370, 600>(game_img.cols, game_img.rows);
 
 	std::array<uint32_t, 256> pixel_count;
 	Detector::GreyscaleAccHistogram(game_img(rect_top), pixel_count);
-	bool top_all_black = (pixel_count[5] == uint32_t(rect_top.area()));
-	bool top_all_white = (pixel_count[248] == 0);
+	bool top_all_black = (pixel_count[5] / double(rect_top.area()) > 0.995);
+	bool top_all_white = (pixel_count[248] / double(rect_top.area()) < 0.005);
 	if (!top_all_black && !top_all_white)
 		return { .type = EventType::None };
 
 	Detector::GreyscaleAccHistogram(game_img(rect_bottom), pixel_count);
-	bool bottom_all_black = (pixel_count[5] == uint32_t(rect_bottom.area()));
-	bool bottom_all_white = (pixel_count[248] == 0);
+	bool bottom_all_black = (pixel_count[5] / double(rect_bottom.area()) > 0.995);
+	bool bottom_all_white = (pixel_count[248] / double(rect_bottom.area()) < 0.005);
 
 	if (top_all_black)
 	{
