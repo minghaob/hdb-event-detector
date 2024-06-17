@@ -173,7 +173,7 @@ struct AssembledEvent : public MultiFrameEvent
 	AssembledEvent(const MultiFrameEvent &e)
 		: MultiFrameEvent(e)
 	{}
-	virtual uint32_t GetNumSubEvents() { return 0; }
-	virtual std::string_view GetSubEventName(uint32_t idx) { return ""; }
-	virtual uint32_t GetSubEventFrameOffset(uint32_t idx) { return 0; }
+	virtual uint32_t GetNumSegments() { return 1; }
+	virtual std::string_view GetSegmentName(uint32_t idx) { return ""; }
+	virtual uint32_t GetSegmentEndFrameOffset(uint32_t idx) { return 0; }
 };

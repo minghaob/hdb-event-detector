@@ -373,16 +373,16 @@ int main(int argc, char* argv[])
 			{
 				os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
 				os << "    type: \"" << EventDeduper::GetMsg(itor->evt.data.type) << "\"" << std::endl;
-				if (itor->GetNumSubEvents() > 0)
+				if (itor->GetNumSegments() > 1)
 				{
-					os << "    subevents: [";
-					for (uint32_t i = 0; i < itor->GetNumSubEvents(); i++)
+					os << "    segments: [";
+					for (uint32_t i = 0; i < itor->GetNumSegments(); i++)
 					{
 						if (i > 0)
 							os << ", ";
-						os << "[" << itor->GetSubEventFrameOffset(i) + itor->evt.frame_number << ", " << itor->GetSubEventName(i) << "]";
+						os << "[" << itor->GetSegmentEndFrameOffset(i) + itor->evt.frame_number << ", \"" << itor->GetSegmentName(i) << "\"]";
 					}
-					os << std::endl;
+					os << ']' << std::endl;
 				}
 			}
 

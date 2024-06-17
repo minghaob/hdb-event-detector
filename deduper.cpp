@@ -129,6 +129,50 @@ struct CompareSharedPointersByValue {
 	}
 };
 
+
+struct ShrineEvent : public AssembledEvent
+{
+	uint32_t frame_offset_enter_end;
+	uint32_t frame_offset_leave_begin;
+
+	ShrineEvent(uint32_t start_frame, uint32_t enter_end_frame, uint32_t leave_begin_frame, uint32_t leave_end_frame)
+		: AssembledEvent(MultiFrameEvent{
+				.evt = {
+					.frame_number = start_frame,
+					.data = {
+						.type = EventType::Shrine,
+					},
+				},
+				.duration = leave_end_frame - start_frame + 1,
+			})
+	{
+		frame_offset_enter_end = enter_end_frame - start_frame;
+		frame_offset_leave_begin = leave_begin_frame - start_frame;
+	}
+	virtual uint32_t GetNumSegments() override { return 3; }
+	virtual std::string_view GetSegmentName(uint32_t idx) override
+	{
+		if (idx == 0)
+			return "Enter";
+		else if (idx == 1)
+			return "Main";
+		else if (idx == 2)
+			return "Leave";
+		return "";
+	}
+	virtual uint32_t GetSegmentEndFrameOffset(uint32_t idx) override
+	{
+		if (idx == 0)
+			return frame_offset_enter_end;
+		else if (idx == 1)
+			return frame_offset_leave_begin;
+		else if (idx == 2)
+			return duration - 1;
+
+		return 0;
+	}
+};
+
 void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::vector<std::shared_ptr<AssembledEvent>>& out_assembled_events)
 {
 	out_assembled_events.reserve(events.size());
@@ -169,7 +213,7 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 			auto itor_to_load = event_set.end();
 			for (auto itor2 = std::next(itor); itor2 != event_set.end(); itor2++)
 			{
-				if ((*itor2)->evt.frame_number - (*itor)->LastFrame() >= 300)		// peak 10 seconds ahead, usually it should be around 6 seonds
+				if ((*itor2)->evt.frame_number - (*itor)->LastFrame() >= 300)		// peak 10 seconds ahead, usually it should be around 6 seconds
 					break;
 				if ((*itor2)->evt.data.type == EventType::Load)
 				{
@@ -193,6 +237,60 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 				event_set.erase(itor);
 				event_set.erase(itor_to_load);
 			}
+		}
+		itor = itor_next;
+	}
+
+	// assemble shrine events
+	for (auto itor = event_set.begin(); itor != event_set.end(); )
+	{
+		auto itor_next = std::next(itor);
+		if ((*itor)->evt.data.type == EventType::SpiritOrb)
+		{
+			auto TryAssembleShrineEvent = [&event_set](auto itor_orb) -> bool {
+				// BlackScreen right before SpiritOrb
+				if ((*std::prev(itor_orb))->evt.data.type != EventType::BlackScreen)
+					return false;
+				// Load (enter shrine) before SpiritOrb
+				// If there's reload inside shrine,that one will be taken instead. Unfortunately there's no way to distinguish between these two cases a.t.m.
+				auto itor_enter_load = itor_orb;
+				while ((*itor_enter_load)->evt.data.type != EventType::Load && itor_enter_load != event_set.begin())
+					itor_enter_load--;
+				if ((*itor_enter_load)->evt.data.type != EventType::Load)
+					return false;
+				// Load is followed by a BlackScreen (skipping enter cutscene)
+				if ((*std::next(itor_enter_load))->evt.data.type != EventType::BlackScreen)
+					return false;
+				// These two BlackScreens must be different ones
+				if (std::next(itor_enter_load) == std::prev(itor_orb))
+					return false;
+				// Load (leave shrine) after SpiritOrb
+				auto itor_leave_load = itor_orb;
+				while ((*itor_leave_load)->evt.data.type != EventType::Load && itor_leave_load != event_set.end())
+					itor_leave_load++;
+				if ((*itor_leave_load)->evt.data.type != EventType::Load)
+					return false;
+
+				MultiFrameEvent shrine_event{
+					.evt = {
+						.frame_number = (*itor_enter_load)->evt.frame_number,
+						.data = {
+							.type = EventType::Shrine,
+						},
+					},
+					.duration = (*itor_leave_load)->LastFrame() - (*itor_enter_load)->evt.frame_number + 1,
+				};
+				event_set.erase(std::prev(itor_orb));			// erase this before erasing itor_orb
+				event_set.erase(itor_orb);
+				event_set.erase(std::next(itor_enter_load));	// erase this before erasing itor_enter_load
+				event_set.erase(itor_enter_load);
+				event_set.erase(itor_leave_load);
+				event_set.emplace(std::make_shared<ShrineEvent>((*itor_enter_load)->evt.frame_number, (*itor_enter_load)->LastFrame(), (*itor_leave_load)->evt.frame_number, (*itor_leave_load)->LastFrame()));
+				return true;
+			};
+
+			if (!TryAssembleShrineEvent(itor))
+				std::cout << "Cannot assemble Shrine event from SpiritOrb event at frame " << (*itor)->evt.frame_number << std::endl;
 		}
 		itor = itor_next;
 	}
