@@ -3,6 +3,8 @@
 #include <ranges>
 #include <numeric>
 
+#include "yaml-cpp/yaml.h"
+
 #include "common.h"
 #include "location_detector.h"
 #include "item_detector.h"
@@ -233,6 +235,34 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	if (yaml_file_path.filename().string().starts_with("deduped"))
+	{
+		std::set<MultiFrameEvent> ordered_deduped_events;
+		YAML::Node run_node = YAML::LoadFile(yaml_file_path.string());
+		YAML::Node events_node = run_node["events"];
+		for (std::size_t idx = 0; idx < events_node.size(); idx++)
+		{
+			YAML::Node event_node = events_node[idx];
+			MultiFrameEvent e;
+			e.evt.frame_number = event_node[0][0].as<uint32_t>();
+			e.duration = event_node[0][1].as<uint32_t>() - e.evt.frame_number + 1;
+			e.evt.data.type = EventDeduper::GetEventType(event_node[1].as<std::string>());
+			ordered_deduped_events.emplace(e);
+		}
+		std::vector<MultiFrameEvent> deduped_events;
+		deduped_events.reserve(ordered_deduped_events.size());
+		for (const MultiFrameEvent& e : ordered_deduped_events)
+			deduped_events.push_back(e);
+
+		std::vector<std::shared_ptr<AssembledEvent>> assembled_events;
+		EventAssembler::Assemble(deduped_events, assembled_events);
+
+		std::string yaml_str = std::move(EventAssembler::AssembledEventsToYAMLString(assembled_events));
+		std::cout << yaml_str << std::endl;
+
+		return 0;
+	}
+
 	RunConfig cfg;
 	if (!LoadRunYaml(cfg, yaml_file_path.string()))
 		return 0;
@@ -329,13 +359,12 @@ int main(int argc, char* argv[])
 				threads[thd_idx].join();
 			std::cout << std::endl;
 
-			for (const auto &thd_events : events)
-				for (const auto &event : thd_events)
+			for (const auto& thd_events : events)
+				for (const auto& event : thd_events)
 					merged_events.emplace(event.frame_number, event);
 		}
 
 		std::vector<MultiFrameEvent> deduped_events;
-
 		EventDeduper::Dedup(merged_events, deduped_events);
 		for (const auto& evt : deduped_events)
 		{
@@ -344,59 +373,37 @@ int main(int argc, char* argv[])
 		}
 
 		{
-			std::ostringstream os;
-			os << "---" << std::endl;
-			os << "events:" << std::endl;
-			for (const auto& itor : deduped_events)
-				os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << EventDeduper::GetMsg(itor.evt.data.type) << "\"]" << std::endl;
+			std::string yaml_str = std::move(EventDeduper::DedupedEventsToYAMLString(deduped_events));
 
-			fs::path raw_path = yaml_path / ("deduped_" + std::to_string(i) + ".yaml");		// raw files start at 01
+			fs::path deduped_path = yaml_path / ("deduped_" + std::to_string(i) + ".yaml");		// raw files start at 01
 			if (yaml_file_path.filename() == "run.yaml")
 			{
-				std::ofstream ofs(raw_path.string());
+				std::ofstream ofs(deduped_path.string());
 				if (!ofs.is_open())
-					std::cout << os.str();
+					std::cout << yaml_str;
 				else
-					ofs << os.str();
+					ofs << yaml_str;
 			}
 			else
-				std::cout << os.str();
+				std::cout << yaml_str;
 		}
 
 		std::vector<std::shared_ptr<AssembledEvent>> assembled_events;
 		EventAssembler::Assemble(deduped_events, assembled_events);
 		{
-			std::ostringstream os;
-			os << "---" << std::endl;
-			os << "events:" << std::endl;
-			for (const auto& itor : assembled_events)
-			{
-				os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
-				os << "    type: \"" << EventDeduper::GetMsg(itor->evt.data.type) << "\"" << std::endl;
-				if (itor->GetNumSegments() > 1)
-				{
-					os << "    segments: [";
-					for (uint32_t i = 0; i < itor->GetNumSegments(); i++)
-					{
-						if (i > 0)
-							os << ", ";
-						os << "[" << itor->GetSegmentEndFrameOffset(i) + itor->evt.frame_number << ", \"" << itor->GetSegmentName(i) << "\"]";
-					}
-					os << ']' << std::endl;
-				}
-			}
+			std::string yaml_str = std::move(EventAssembler::AssembledEventsToYAMLString(assembled_events));
 
-			fs::path raw_path = yaml_path / ("assembled_" + std::to_string(i) + ".yaml");		// raw files start at 01
+			fs::path assembled_path = yaml_path / ("assembled_" + std::to_string(i) + ".yaml");		// raw files start at 01
 			if (yaml_file_path.filename() == "run.yaml")
 			{
-				std::ofstream ofs(raw_path.string());
+				std::ofstream ofs(assembled_path.string());
 				if (!ofs.is_open())
-					std::cout << os.str();
+					std::cout << yaml_str;
 				else
-					ofs << os.str();
+					ofs << yaml_str;
 			}
 			else
-				std::cout << os.str();
+				std::cout << yaml_str;
 		}
 	}
 

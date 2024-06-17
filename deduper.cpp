@@ -116,9 +116,31 @@ void EventDeduper::Dedup(const std::multimap<uint32_t, SingleFrameEvent>& events
 		out_deduped_events.push_back(e);
 }
 
+std::string EventDeduper::DedupedEventsToYAMLString(std::vector<MultiFrameEvent>& deduped_events)
+{
+	std::ostringstream os;
+	os << "---" << std::endl;
+	os << "events:" << std::endl;
+	for (const auto& itor : deduped_events)
+		os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << EventDeduper::GetMsg(itor.evt.data.type) << "\"]" << std::endl;
+
+	return os.str();
+}
+
 std::string_view EventDeduper::GetMsg(EventType t)
 {
 	return event_message[std::to_underlying(t)];
+}
+
+EventType EventDeduper::GetEventType(const std::string_view& s)
+{
+	for (uint32_t i = 0; i < std::to_underlying(EventType::Max); i++)
+	{
+		if (s == event_message[i])
+			return EventType(i);
+	}
+
+	return EventType::None;
 }
 
 
@@ -204,7 +226,7 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 		event_set.emplace(std::make_shared<AssembledEvent>(events[i]));
 	}
 
-	// assemble load events
+	// assemble travel events
 	for (auto itor = event_set.begin(); itor != event_set.end(); )
 	{
 		auto itor_next = std::next(itor);
@@ -233,7 +255,7 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 					},
 					.duration = (*itor_to_load)->LastFrame() - (*itor)->evt.frame_number + 1,
 				};
-				event_set.emplace(std::make_shared<AssembledEvent>(load_event));
+				itor_next = event_set.emplace(std::make_shared<AssembledEvent>(load_event)).first;		// the old itor_next might be invalidated by the erases below
 				event_set.erase(itor);
 				event_set.erase(itor_to_load);
 			}
@@ -247,10 +269,7 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 		auto itor_next = std::next(itor);
 		if ((*itor)->evt.data.type == EventType::SpiritOrb)
 		{
-			auto TryAssembleShrineEvent = [&event_set](auto itor_orb) -> bool {
-				// BlackScreen right before SpiritOrb
-				if ((*std::prev(itor_orb))->evt.data.type != EventType::BlackScreen)
-					return false;
+			auto TryAssembleShrineEvent = [&event_set, &itor_next](auto itor_orb) -> bool {
 				// Load (enter shrine) before SpiritOrb
 				// If there's reload inside shrine,that one will be taken instead. Unfortunately there's no way to distinguish between these two cases a.t.m.
 				auto itor_enter_load = itor_orb;
@@ -258,12 +277,19 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 					itor_enter_load--;
 				if ((*itor_enter_load)->evt.data.type != EventType::Load)
 					return false;
-				// Load is followed by a BlackScreen (skipping enter cutscene)
+
+				// BlackScreen right after Load (skipping enter cutscene)
+				auto itor_blackscreen0 = std::next(itor_enter_load);
 				if ((*std::next(itor_enter_load))->evt.data.type != EventType::BlackScreen)
 					return false;
-				// These two BlackScreens must be different ones
-				if (std::next(itor_enter_load) == std::prev(itor_orb))
+				// BlackScreen right before SpiritOrb (after the glowing box breaks)
+				auto itor_blackscreen1 = std::prev(itor_orb);
+				if ((*itor_blackscreen1)->evt.data.type != EventType::BlackScreen)
 					return false;
+				// These two BlackScreens must be different ones
+				if (itor_blackscreen0 == itor_blackscreen1)
+					return false;
+
 				// Load (leave shrine) after SpiritOrb
 				auto itor_leave_load = itor_orb;
 				while ((*itor_leave_load)->evt.data.type != EventType::Load && itor_leave_load != event_set.end())
@@ -280,12 +306,13 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 					},
 					.duration = (*itor_leave_load)->LastFrame() - (*itor_enter_load)->evt.frame_number + 1,
 				};
-				event_set.erase(std::prev(itor_orb));			// erase this before erasing itor_orb
-				event_set.erase(itor_orb);
-				event_set.erase(std::next(itor_enter_load));	// erase this before erasing itor_enter_load
+				// the old itor_next might be invalidated by the erases below
+				itor_next = event_set.emplace(std::make_shared<ShrineEvent>((*itor_enter_load)->evt.frame_number, (*itor_enter_load)->LastFrame(), (*itor_leave_load)->evt.frame_number, (*itor_leave_load)->LastFrame())).first;
 				event_set.erase(itor_enter_load);
+				event_set.erase(itor_blackscreen0);			// erase this before erasing itor_orb
+				event_set.erase(itor_blackscreen1);			// erase this before erasing itor_enter_load
+				event_set.erase(itor_orb);
 				event_set.erase(itor_leave_load);
-				event_set.emplace(std::make_shared<ShrineEvent>((*itor_enter_load)->evt.frame_number, (*itor_enter_load)->LastFrame(), (*itor_leave_load)->evt.frame_number, (*itor_leave_load)->LastFrame()));
 				return true;
 			};
 
@@ -297,4 +324,29 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 
 	for (const auto& e : event_set)
 		out_assembled_events.push_back(e);
+}
+
+std::string EventAssembler::AssembledEventsToYAMLString(const std::vector<std::shared_ptr<AssembledEvent>>& assembled_events)
+{
+	std::ostringstream os;
+	os << "---" << std::endl;
+	os << "events:" << std::endl;
+	for (const auto& itor : assembled_events)
+	{
+		os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
+		os << "    type: \"" << EventDeduper::GetMsg(itor->evt.data.type) << "\"" << std::endl;
+		if (itor->GetNumSegments() > 1)
+		{
+			os << "    segments: [";
+			for (uint32_t i = 0; i < itor->GetNumSegments(); i++)
+			{
+				if (i > 0)
+					os << ", ";
+				os << "[" << itor->GetSegmentEndFrameOffset(i) + itor->evt.frame_number << ", \"" << itor->GetSegmentName(i) << "\"]";
+			}
+			os << ']' << std::endl;
+		}
+	}
+	
+	return os.str();
 }
