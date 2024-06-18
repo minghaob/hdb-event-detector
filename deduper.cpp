@@ -30,7 +30,7 @@ namespace __details
 	constexpr auto event_msgs = std::to_array<std::pair<EventType, std::string_view>>({
 		{ EventType::Korok,				"Korok Seed" },
 		{ EventType::SpiritOrb,			"Spirit Orb" },
-		{ EventType::TowerActivation,	"Sheikah Tower activated." },
+		{ EventType::TowerActivation,	"Tower Activation" },
 		{ EventType::TravelButton,		"Travel" },
 		{ EventType::LoadingScreen,		"Loading Screen" },
 		{ EventType::BlackScreen,		"Black Screen" },
