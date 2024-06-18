@@ -302,7 +302,7 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "Processing with " << num_threads << " work threads" << std::endl;
 
-	std::map<std::string, uint32_t> event_counter;
+	std::map<EventType, uint32_t> event_counter;
 
 	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
 	{
@@ -366,11 +366,6 @@ int main(int argc, char* argv[])
 
 		std::vector<MultiFrameEvent> deduped_events;
 		EventDeduper::Dedup(merged_events, deduped_events);
-		for (const auto& evt : deduped_events)
-		{
-			std::string_view msg = EventDeduper::GetMsg(evt.evt.data.type);
-			event_counter.try_emplace(std::string(msg), 0).first->second++;
-		}
 
 		{
 			std::string yaml_str = std::move(EventDeduper::DedupedEventsToYAMLString(deduped_events));
@@ -405,10 +400,13 @@ int main(int argc, char* argv[])
 			else
 				std::cout << yaml_str;
 		}
+
+		for (const auto& evt : assembled_events)
+			event_counter.try_emplace(evt->evt.data.type, 0).first->second++;
 	}
 
 	for (auto& itor : event_counter)
-		std::cout << itor.first << ": " << itor.second << std::endl;
+		std::cout << EventDeduper::GetMsg(itor.first) << ": " << itor.second << std::endl;
 
 	return 0;
 }
