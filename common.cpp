@@ -1,5 +1,50 @@
 #include "common.h"
 
+namespace __details{
+	constexpr auto event_msgs = std::to_array<std::pair<EventType, std::string_view>>({
+		{ EventType::Korok,				"Korok Seed" },
+		{ EventType::SpiritOrb,			"Spirit Orb" },
+		{ EventType::TowerActivation,	"Tower Activation" },
+		{ EventType::TravelButton,		"Travel" },
+		{ EventType::LoadingScreen,		"Loading Screen" },
+		{ EventType::BlackScreen,		"Black Screen" },
+		{ EventType::WhiteScreen,		"White Screen" },
+		{ EventType::AlbumPage,			"Album Page" },
+		{ EventType::Talus,				"Talus" },
+		{ EventType::Hinox,				"Hinox" },
+		{ EventType::Molduga,			"Molduga" },
+		{ EventType::ZoraMonument,		"Zora Monument" },
+		{ EventType::Dialog,			"Dialog" },
+		{ EventType::Load,				"Load" },
+		{ EventType::Warp,				"Warp" },
+		{ EventType::Shrine,			"Shrine" },
+		{ EventType::Memory,			"Memory" },
+		{ EventType::DivineBeast,		"Divine Beast" },
+		});
+
+	static consteval bool VerifyMsgTable(const std::array<std::string_view, uint32_t(EventType::Max)>& tabel)
+	{
+		for (auto i = std::to_underlying(EventType::SingleFrameEventBegin) + 1; i < std::to_underlying(EventType::SingleFrameEventEnd); i++)
+			if (tabel[i].size() == 0)
+				return false;
+		for (auto i = std::to_underlying(EventType::AssembledEventBegin) + 1; i < std::to_underlying(EventType::AssembledEventEnd); i++)
+			if (tabel[i].size() == 0)
+				return false;
+		return true;
+	}
+	static consteval std::array<std::string_view, uint32_t(EventType::Max)> CreateEventMessageArray()
+	{
+		std::array<std::string_view, uint32_t(EventType::Max)> ret{};
+		for (size_t i = 0; i < event_msgs.size(); i++)
+			ret[std::to_underlying(event_msgs[i].first)] = event_msgs[i].second;
+
+		return ret;
+	}
+}
+
+constexpr std::array<std::string_view, uint32_t(EventType::Max)> event_message = __details::CreateEventMessageArray();
+static_assert(__details::VerifyMsgTable(event_message));
+
 namespace util
 {
 
@@ -70,6 +115,22 @@ std::string SecondToTimeString(uint32_t sec)
 	sprintf_s(buf, "%02d:%02d:%02d", sec / 3600, sec % 3600 / 60, sec % 60);
 
 	return buf;
+}
+
+std::string_view GetEventText(EventType t)
+{
+	return event_message[std::to_underlying(t)];
+}
+
+EventType GetEventType(const std::string_view& s)
+{
+	for (uint32_t i = 0; i < std::to_underlying(EventType::Max); i++)
+	{
+		if (s == event_message[i])
+			return EventType(i);
+	}
+
+	return EventType::None;
 }
 
 }

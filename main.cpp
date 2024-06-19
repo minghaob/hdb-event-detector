@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
 			MultiFrameEvent e;
 			e.evt.frame_number = event_node[0][0].as<uint32_t>();
 			e.duration = event_node[0][1].as<uint32_t>() - e.evt.frame_number + 1;
-			e.evt.data.type = EventDeduper::GetEventType(event_node[1].as<std::string>());
+			e.evt.data.type = util::GetEventType(event_node[1].as<std::string>());
 			ordered_deduped_events.emplace(e);
 		}
 		std::vector<MultiFrameEvent> deduped_events;
@@ -364,6 +364,11 @@ int main(int argc, char* argv[])
 					merged_events.emplace(event.frame_number, event);
 		}
 
+		// apply patch
+		for (const auto& event : cfg.videos[i].patches)
+			merged_events.emplace(event.frame_number, event);
+		std::cout << "Added " << cfg.videos[i].patches.size() << " additional events from patch." << std::endl;
+
 		std::vector<MultiFrameEvent> deduped_events;
 		EventDeduper::Dedup(merged_events, deduped_events);
 
@@ -406,7 +411,7 @@ int main(int argc, char* argv[])
 	}
 
 	for (auto& itor : event_counter)
-		std::cout << EventDeduper::GetMsg(itor.first) << ": " << itor.second << std::endl;
+		std::cout << util::GetEventText(itor.first) << ": " << itor.second << std::endl;
 
 	return 0;
 }

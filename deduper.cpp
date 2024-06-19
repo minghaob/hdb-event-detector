@@ -26,52 +26,9 @@ namespace __details
 			ret[std::to_underlying(dedup_cfgs[i].t)] = dedup_cfgs[i].minimal_spacing;
 		return ret;
 	}
-
-	constexpr auto event_msgs = std::to_array<std::pair<EventType, std::string_view>>({
-		{ EventType::Korok,				"Korok Seed" },
-		{ EventType::SpiritOrb,			"Spirit Orb" },
-		{ EventType::TowerActivation,	"Tower Activation" },
-		{ EventType::TravelButton,		"Travel" },
-		{ EventType::LoadingScreen,		"Loading Screen" },
-		{ EventType::BlackScreen,		"Black Screen" },
-		{ EventType::WhiteScreen,		"White Screen" },
-		{ EventType::AlbumPage,			"Album Page" },
-		{ EventType::Talus,				"Talus" },
-		{ EventType::Hinox,				"Hinox" },
-		{ EventType::Molduga,			"Molduga" },
-		{ EventType::ZoraMonument,		"Zora Monument" },
-		{ EventType::Dialog,			"Dialog" },
-		{ EventType::Load,				"Load" },
-		{ EventType::Warp,				"Warp" },
-		{ EventType::Shrine,			"Shrine" },
-		{ EventType::Memory,			"Memory" },
-		{ EventType::DivineBeast,		"Divine Beast" },
-	});
-
-	static consteval bool VerifyMsgTable(const std::array<std::string_view, uint32_t(EventType::Max)> &tabel)
-	{
-		for (auto i = std::to_underlying(EventType::SingleFrameEventBegin) + 1; i < std::to_underlying(EventType::SingleFrameEventEnd); i++)
-			if (tabel[i].size() == 0)
-				return false;
-		for (auto i = std::to_underlying(EventType::AssembledEventBegin) + 1; i < std::to_underlying(EventType::AssembledEventEnd); i++)
-			if (tabel[i].size() == 0)
-				return false;
-		return true;
-	}
-	static consteval std::array<std::string_view, uint32_t(EventType::Max)> CreateEventMessageArray()
-	{
-		std::array<std::string_view, uint32_t(EventType::Max)> ret{};
-		for (size_t i = 0; i < event_msgs.size(); i++)
-			ret[std::to_underlying(event_msgs[i].first)] = event_msgs[i].second;
-
-		return ret;
-	}
 }
 
 constexpr std::array<uint32_t, uint32_t(EventType::Max)> minimal_spacing = __details::CreateMinimalSpacingArray();
-constexpr std::array<std::string_view, uint32_t(EventType::Max)> event_message = __details::CreateEventMessageArray();
-
-static_assert(__details::VerifyMsgTable(event_message));
 
 void EventDeduper::Dedup(const std::multimap<uint32_t, SingleFrameEvent>& events, std::vector<MultiFrameEvent>& out_deduped_events)
 {
@@ -122,27 +79,10 @@ std::string EventDeduper::DedupedEventsToYAMLString(std::vector<MultiFrameEvent>
 	os << "---" << std::endl;
 	os << "events:" << std::endl;
 	for (const auto& itor : deduped_events)
-		os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << EventDeduper::GetMsg(itor.evt.data.type) << "\"]" << std::endl;
+		os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << util::GetEventText(itor.evt.data.type) << "\"]" << std::endl;
 
 	return os.str();
 }
-
-std::string_view EventDeduper::GetMsg(EventType t)
-{
-	return event_message[std::to_underlying(t)];
-}
-
-EventType EventDeduper::GetEventType(const std::string_view& s)
-{
-	for (uint32_t i = 0; i < std::to_underlying(EventType::Max); i++)
-	{
-		if (s == event_message[i])
-			return EventType(i);
-	}
-
-	return EventType::None;
-}
-
 
 struct CompareSharedPointersByValue {
 	template <typename T>
@@ -334,7 +274,7 @@ std::string EventAssembler::AssembledEventsToYAMLString(const std::vector<std::s
 	for (const auto& itor : assembled_events)
 	{
 		os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
-		os << "    type: \"" << EventDeduper::GetMsg(itor->evt.data.type) << "\"" << std::endl;
+		os << "    type: \"" << util::GetEventText(itor->evt.data.type) << "\"" << std::endl;
 		if (itor->GetNumSegments() > 1)
 		{
 			os << "    segments: [";

@@ -60,24 +60,6 @@
 
 #pragma comment(lib, "winmm.lib")
 
-namespace util
-{
-	/**
-	 * Get the edit distance between two strings.
-	 * if the distance is larger than max_allowed_edits, returns max_allowed_edits + 1
-	 */
-	uint32_t GetStringEditDistance(const std::string& first, const std::string& second, uint32_t max_allowed_edits);
-
-
-	/**
-	 * Reorder channels of an opencv Mat in BGRA format to Leptonica RGBA order
-	 */
-	void OpenCvMatBGRAToLeptonicaRGBAInplace(cv::Mat& frame);
-
-	std::string FrameToTimeString(uint32_t frame);
-	std::string SecondToTimeString(uint32_t sec);
-}
-
 enum class EventType : uint8_t
 {
 	// single frame events
@@ -109,6 +91,27 @@ enum class EventType : uint8_t
 
 	Max,
 };
+
+namespace util
+{
+	/**
+	 * Get the edit distance between two strings.
+	 * if the distance is larger than max_allowed_edits, returns max_allowed_edits + 1
+	 */
+	uint32_t GetStringEditDistance(const std::string& first, const std::string& second, uint32_t max_allowed_edits);
+
+
+	/**
+	 * Reorder channels of an opencv Mat in BGRA format to Leptonica RGBA order
+	 */
+	void OpenCvMatBGRAToLeptonicaRGBAInplace(cv::Mat& frame);
+
+	std::string FrameToTimeString(uint32_t frame);
+	std::string SecondToTimeString(uint32_t sec);
+
+	std::string_view GetEventText(EventType t);
+	EventType GetEventType(const std::string_view& s);
+}
 
 struct SingleFrameEventData
 {

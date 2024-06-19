@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include "common.h"
 
 struct RunConfig
 {
@@ -15,6 +16,7 @@ struct RunConfig
 		uint32_t bbox_top;
 		uint32_t bbox_bottom;
 		std::vector<Segment> segments;
+		std::vector<SingleFrameEvent> patches;
 	};
 
 	std::string uid;
