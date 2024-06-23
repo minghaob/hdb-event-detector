@@ -66,6 +66,29 @@ void Detector::GreyscaleAccHistogram(const cv::Mat& img, std::array<uint32_t, 25
 		pix_count[i] += pix_count[i - 1];
 }
 
+void Detector::BGRAccHistogram(const cv::Mat& img, std::array<std::array<uint32_t, 256>, 3>& pix_count)
+{
+	pix_count[0].fill(0);
+	pix_count[1].fill(0);
+	pix_count[2].fill(0);
+	for (int i = 0; i < img.rows; i++)
+	{
+		uint8_t* data = img.row(i).data;
+		for (int j = 0; j < img.cols; j++)
+		{
+			pix_count[0][data[j * 3]]++;
+			pix_count[1][data[j * 3 + 1]]++;
+			pix_count[2][data[j * 3 + 2]]++;
+		}
+	}
+	for (int i = 1; i <= 255; i++)
+	{
+		pix_count[0][i] += pix_count[0][i - 1];
+		pix_count[1][i] += pix_count[1][i - 1];
+		pix_count[2][i] += pix_count[2][i - 1];
+	}
+}
+
 bool Detector::GreyscaleTest(const cv::Mat& img, const std::vector<GreyScaleTestCriteria> &criteria)
 {
 	// scan the image

@@ -59,3 +59,22 @@ public:
 	// returns true if travel button is present
 	SingleFrameEventData GetEvent(const cv::Mat& game_img);
 };
+
+class AlbumPageDetector
+{
+private:
+	tesseract::TessBaseAPI& _tess_api;
+
+public:
+	AlbumPageDetector(tesseract::TessBaseAPI& api)
+		: _tess_api(api) {
+	}
+	~AlbumPageDetector() = default;
+
+	bool Init(const char* lang) {
+		return true;
+	}
+
+	// returns true if travel button is present
+	bool IsOnAlbumPage(const cv::Mat& game_img);
+};

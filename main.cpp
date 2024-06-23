@@ -85,6 +85,10 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 	if (!bwl_detector.Init(lang.c_str()))
 		return;
 
+	AlbumPageDetector album_detector(shared_tess_api.API());
+	if (!album_detector.Init(lang.c_str()))
+		return;
+
 	cv::VideoCapture cap(video_file);
 	if (cap.isOpened())
 	{
@@ -192,6 +196,16 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 							.data = data,
 						});
 					}
+				}
+
+				if (album_detector.IsOnAlbumPage(frame(game_rect)))
+				{
+					outEvents.push_back({
+						.frame_number = cur_frame,
+						.data = {
+							.type = EventType::AlbumPage,
+						},
+					});
 				}
 
 				num_frame_parsed++;
@@ -365,9 +379,12 @@ int main(int argc, char* argv[])
 		}
 
 		// apply patch
-		for (const auto& event : cfg.videos[i].patches)
-			merged_events.emplace(event.frame_number, event);
-		std::cout << "Added " << cfg.videos[i].patches.size() << " additional events from patch." << std::endl;
+		if (cfg.videos[i].patches.size() > 0)
+		{
+			for (const auto& event : cfg.videos[i].patches)
+				merged_events.emplace(event.frame_number, event);
+			std::cout << "Added " << cfg.videos[i].patches.size() << " additional events from patch." << std::endl;
+		}
 
 		std::vector<MultiFrameEvent> deduped_events;
 		EventDeduper::Dedup(merged_events, deduped_events);

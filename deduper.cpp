@@ -16,6 +16,7 @@ namespace __details
 		{ EventType::LoadingScreen,		5 },
 		{ EventType::BlackScreen,		5 },
 		{ EventType::WhiteScreen,		5 },
+		{ EventType::AlbumPage,			30 },
 	});
 
 	static consteval std::array<uint32_t, uint32_t(EventType::Max)> CreateMinimalSpacingArray()
@@ -157,8 +158,40 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 				},
 				.duration = events[i + 2].LastFrame() - events[i].evt.frame_number + 1,
 			};
-			event_set.emplace(std::make_shared<AssembledEvent>(load_event));
 			i += 2;			// skip the next 2 events
+			event_set.emplace(std::make_shared<AssembledEvent>(load_event));
+			continue;
+		}
+
+		// assemble memory events
+		if (i + 1 < uint32_t(events.size())
+			&& events[i].evt.data.type == EventType::AlbumPage
+			&& events[i + 1].evt.data.type == EventType::WhiteScreen
+			&& events[i + 1].evt.frame_number <= events[i].LastFrame() + 360
+			&& events[i + 1].evt.frame_number >= events[i].LastFrame() + 330)		// the fade in white screen of the memory is around 343 frames after the last album page frame (it follows the music)
+		{
+			int num_whitescreen_events = 1;
+
+			// the fade out white screen of memory. In most cases it follows the previous one immediately because memory is skipped by pressing X and +
+			// but just in case some runner decides to watch the whole memory for fun, the longest memory is about 3 minutes (Memory 11 at Lanayru Road - East Gate)
+			// so a white screen within 190 seconds is accepted
+			// also, this second white screen is optional, because if the memory is skipped too fast, it might be detected as part of the previous white screen
+			if (i + 2 < uint32_t(events.size()) && events[i + 2].evt.data.type == EventType::WhiteScreen
+				&& events[i + 2].evt.frame_number <= events[i + 1].LastFrame() + 190 * 30)
+				num_whitescreen_events = 2;
+
+			MultiFrameEvent memory_event{
+				.evt = {
+					.frame_number = events[i].evt.frame_number,
+					.data = {
+						.type = EventType::Memory,
+					},
+				},
+				.duration = events[i + num_whitescreen_events].LastFrame() - events[i].evt.frame_number + 1,
+			};
+			i += num_whitescreen_events;			// skip the white screen event(s)
+
+			event_set.emplace(std::make_shared<AssembledEvent>(memory_event));
 			continue;
 		}
 

@@ -78,3 +78,60 @@ SingleFrameEventData BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_
 
 	return { .type = EventType::None };
 }
+
+bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
+{
+	{
+		cv::Rect rect_l = Detector::BBoxConversion<482, 497, 32, 46>(game_img.cols, game_img.rows);			// L button
+		cv::Rect rect_r = Detector::BBoxConversion<780, 795, 32, 46>(game_img.cols, game_img.rows);			// R button
+
+		std::array<std::array<uint32_t, 256>, 3> pixel_count;
+
+		Detector::BGRAccHistogram(game_img(rect_l), pixel_count);
+		if (pixel_count[2][128] / double(rect_l.area()) < 0.9)			// no pixel has red channel > 128
+			return false;
+		if (pixel_count[1][215] / double(rect_l.area()) < 0.9)			// no pixel has green channel > 215
+			return false;
+		if (pixel_count[0][150] / double(rect_l.area()) > 0.1)			// most pixels have blue channel > 150
+			return false;
+
+		Detector::BGRAccHistogram(game_img(rect_r), pixel_count);
+		if (pixel_count[2][128] / double(rect_r.area()) < 0.9)			// no pixel has red channel > 128
+			return false;
+		if (pixel_count[1][215] / double(rect_r.area()) < 0.9)			// no pixel has green channel > 215
+			return false;
+		if (pixel_count[0][150] / double(rect_r.area()) > 0.1)			// most pixels have blue channel > 150
+			return false;
+	}
+	{
+		cv::Rect rect_left_side = Detector::BBoxConversion<507, 597, 26, 51>(game_img.cols, game_img.rows);		// area between L button and "Album"
+		cv::Rect rect_right_side = Detector::BBoxConversion<670, 771, 26, 51>(game_img.cols, game_img.rows);	// area between R button and "Album"
+		// nothing brighter than 100 in these areas
+		std::array<uint32_t, 256> pixel_count;
+		Detector::GreyscaleAccHistogram(game_img(rect_left_side), pixel_count);
+		if (pixel_count[100] / double(rect_left_side.area()) < 0.95)
+			return false;
+		Detector::GreyscaleAccHistogram(game_img(rect_right_side), pixel_count);
+		if (pixel_count[100] / double(rect_right_side.area()) < 0.95)
+			return false;
+	}
+
+	std::array<std::array<uint32_t, 256>, 3> pixel_count;
+	cv::Rect rect = Detector::BBoxConversion<600, 669, 26, 51>(game_img.cols, game_img.rows);		// top middle where "Album" is
+
+	Detector::BGRAccHistogram(game_img(rect), pixel_count);
+
+	if (pixel_count[2][128] / double(rect.area()) < 0.9)			// no pixel has red channel > 128
+		return false;
+	if (pixel_count[1][215] / double(rect.area()) < 0.9)			// no pixel has green channel > 215
+		return false;
+
+	double blue_pixel_ratio = 1.0 - pixel_count[0][99] / double(rect.area());
+	if (blue_pixel_ratio < 0.45 || blue_pixel_ratio > 0.6)
+		return false;
+
+	double scale_factor = 1;
+	std::string ret = Detector::OCR(game_img(rect), scale_factor, 85, 170, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
+
+	return ret == "Album";
+}
