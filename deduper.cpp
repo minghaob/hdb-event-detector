@@ -173,9 +173,11 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 			int num_whitescreen_events = 1;
 
 			// the fade out white screen of memory. In most cases it follows the previous one immediately because memory is skipped by pressing X and +
-			// but just in case some runner decides to watch the whole memory for fun, the longest memory is about 3 minutes (Memory 11 at Lanayru Road - East Gate)
-			// so a white screen within 190 seconds is accepted
-			// also, this second white screen is optional, because if the memory is skipped too fast, it might be detected as part of the previous white screen
+			// but just in case some runners decide to watch the whole memory for fun, since the longest memory is about 3 minutes (Memory 11 at Lanayru Road - East Gate)
+			// a white screen within 190 seconds is accepted
+			// also, this second white screen is optional, because:
+			//  1) if the memory is skipped too fast, it might be detected as part of the previous white screen
+			//  2) a video might have been captured using a color mapping that makes pixels brighter, which could cause the first couple frame of the cutscene to be considered white screen. Thus bridging the fade-in / out white screens.
 			if (i + 2 < uint32_t(events.size()) && events[i + 2].evt.data.type == EventType::WhiteScreen
 				&& events[i + 2].evt.frame_number <= events[i + 1].LastFrame() + 190 * 30)
 				num_whitescreen_events = 2;

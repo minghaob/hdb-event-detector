@@ -90,7 +90,7 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 		Detector::BGRAccHistogram(game_img(rect_l), pixel_count);
 		if (pixel_count[2][128] / double(rect_l.area()) < 0.9)			// no pixel has red channel > 128
 			return false;
-		if (pixel_count[1][215] / double(rect_l.area()) < 0.9)			// no pixel has green channel > 215
+		if (pixel_count[1][230] / double(rect_l.area()) < 0.9)			// no pixel has green channel > 230
 			return false;
 		if (pixel_count[0][150] / double(rect_l.area()) > 0.1)			// most pixels have blue channel > 150
 			return false;
@@ -98,7 +98,7 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 		Detector::BGRAccHistogram(game_img(rect_r), pixel_count);
 		if (pixel_count[2][128] / double(rect_r.area()) < 0.9)			// no pixel has red channel > 128
 			return false;
-		if (pixel_count[1][215] / double(rect_r.area()) < 0.9)			// no pixel has green channel > 215
+		if (pixel_count[1][230] / double(rect_r.area()) < 0.9)			// no pixel has green channel > 230
 			return false;
 		if (pixel_count[0][150] / double(rect_r.area()) > 0.1)			// most pixels have blue channel > 150
 			return false;
@@ -123,11 +123,12 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 
 	if (pixel_count[2][128] / double(rect.area()) < 0.9)			// no pixel has red channel > 128
 		return false;
-	if (pixel_count[1][215] / double(rect.area()) < 0.9)			// no pixel has green channel > 215
+	if (pixel_count[1][230] / double(rect.area()) < 0.9)			// no pixel has green channel > 230
 		return false;
 
-	double blue_pixel_ratio = 1.0 - pixel_count[0][99] / double(rect.area());
-	if (blue_pixel_ratio < 0.45 || blue_pixel_ratio > 0.6)
+	double blue_pixel_ratio = pixel_count[0][99] / double(rect.area());
+	double blue_pixel_ratio2 = pixel_count[0][179] / double(rect.area());
+	if (blue_pixel_ratio < 0.4 || blue_pixel_ratio > 0.55 || blue_pixel_ratio2 > 0.9)
 		return false;
 
 	double scale_factor = 1;
