@@ -381,9 +381,38 @@ int main(int argc, char* argv[])
 		// apply patch
 		if (cfg.videos[i].patches.size() > 0)
 		{
-			for (const auto& event : cfg.videos[i].patches)
-				merged_events.emplace(event.frame_number, event);
-			std::cout << "Added " << cfg.videos[i].patches.size() << " additional events from patch." << std::endl;
+			uint32_t num_added_events = 0;
+			uint32_t num_removed_events = 0;
+			for (const RunConfig::Video::Patch& patch : cfg.videos[i].patches)
+			{
+				if (!patch.remove)
+				{
+					for (uint32_t frame = patch.evt.frame_number; frame <= patch.end_frame; frame++)
+					{
+						merged_events.emplace(frame, patch.evt);
+						num_added_events++;
+					}
+				}
+				else
+				{
+					auto itor = merged_events.lower_bound(patch.evt.frame_number);
+					while (itor != merged_events.end())
+					{
+						if (itor->first > patch.end_frame)
+							break;
+						if (itor->second.data == patch.evt.data)
+						{
+							auto itor_next = std::next(itor);
+							merged_events.erase(itor);
+							itor = itor_next;
+							num_removed_events++;
+						}
+						else
+							itor++;
+					}
+				}
+			}
+			std::cout << "Added " << num_added_events << " and removed " << num_removed_events << " events when applying " << cfg.videos[i].patches.size() << " patches." << std::endl;
 		}
 
 		std::vector<MultiFrameEvent> deduped_events;

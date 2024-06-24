@@ -125,13 +125,36 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 				std::cout << "run file: patch[" << patch_idx << "].video has invalid value " << video_idx << std::endl;
 				return false;
 			}
-			uint32_t frame_number = frame_number_node.as<uint32_t>();
+			uint32_t frame_number;
+			uint32_t end_frame;
+			if (frame_number_node.IsScalar())
+			{
+				frame_number = frame_number_node.as<uint32_t>();
+				end_frame = frame_number;
+			}
+			else if (frame_number_node.IsSequence() && frame_number_node.size() == 2)
+			{
+				frame_number = frame_number_node[0].as<uint32_t>();
+				end_frame = frame_number_node[1].as<uint32_t>();
+				if (end_frame < frame_number)
+				{
+					std::cout << "run file: patch[" << patch_idx << "].frame has end frame smaller than start frame." << std::endl;
+					return false;
+				}
+			}
+			else
+			{
+				std::cout << "run file: patch[" << patch_idx << "].frame is neither a number nor a sequence of two numbers." << std::endl;
+				return false;
+			}
 			{
 				bool frame_valid = false;
 				std::vector<RunConfig::Video::Segment>& segs = run_cfg.videos[video_idx].segments;
 				for (size_t i = 0 ; i < segs.size(); i++)
 					if (frame_number >= segs[i].start_frame && frame_number <= segs[i].end_frame)
 					{
+						if (end_frame != frame_number && end_frame < segs[i].start_frame || frame_number > segs[i].end_frame)
+							break;
 						frame_valid = true;
 						break;
 					}
@@ -142,17 +165,26 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 				}
 			}
 			std::string event_text = event_type_node.as<std::string>();
-			EventType event_type = util::GetEventType(event_text);
+			EventType event_type;
+			bool remove = event_text.size() > 0 && event_text[0] == '-';
+			if (remove)
+				event_type = util::GetEventType(std::string_view(event_text).substr(1));
+			else
+				event_type = util::GetEventType(event_text);
 			if (event_type == EventType::None)
 			{
 				std::cout << "run file: patch[" << patch_idx << "].event has unrecognized value \"" << event_text << "\"" << std::endl;
 				return false;
 			}
 			run_cfg.videos[video_idx].patches.push_back({
-					.frame_number = frame_number,
-					.data = {
-						.type = event_type,
-					}
+					.evt = {
+						.frame_number = frame_number,
+						.data = {
+							.type = event_type,
+						}
+					},
+					.end_frame = end_frame,
+					.remove = remove,
 				}
 			);
 
