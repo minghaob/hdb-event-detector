@@ -9,14 +9,20 @@ namespace __details
 	};
 
 	constexpr auto dedup_cfgs = std::to_array<EventDedupConfig>({
-		{ EventType::Korok,				90 },
-		{ EventType::SpiritOrb,			90 },
-		{ EventType::TowerActivation,	90 },
-		{ EventType::TravelButton,		90 },
-		{ EventType::LoadingScreen,		5 },
-		{ EventType::BlackScreen,		5 },
-		{ EventType::WhiteScreen,		5 },
-		{ EventType::AlbumPage,			30 },
+		{ EventType::Korok,					90 },
+		{ EventType::SpiritOrb,				90 },
+		{ EventType::TowerActivation,		90 },
+		{ EventType::TravelButton,			90 },
+		{ EventType::LoadingScreen,			5 },
+		{ EventType::BlackScreen,			5 },
+		{ EventType::WhiteScreen,			5 },
+		{ EventType::AlbumPage,				30 },
+		{ EventType::GateRegistered,		30 },
+		{ EventType::SlateAuthenticated,	30 },
+		{ EventType::RevaliGale,			30 },
+		{ EventType::UrbosaFury,			30 },
+		{ EventType::MiphaGrace,			30 },
+		{ EventType::DarukProtection,		30 },
 	});
 
 	static consteval std::array<uint32_t, uint32_t(EventType::Max)> CreateMinimalSpacingArray()
@@ -92,7 +98,6 @@ struct CompareSharedPointersByValue {
 	}
 };
 
-
 struct ShrineEvent : public AssembledEvent
 {
 	uint32_t frame_offset_enter_end;
@@ -130,6 +135,51 @@ struct ShrineEvent : public AssembledEvent
 		else if (idx == 1)
 			return frame_offset_leave_begin;
 		else if (idx == 2)
+			return duration - 1;
+
+		return 0;
+	}
+};
+
+struct DivineBeastEvent : public AssembledEvent
+{
+	uint32_t frame_offset_terminals[5];
+	uint32_t frame_offset_blight_start;
+	uint32_t frame_offset_blight_end;
+
+	DivineBeastEvent(EventType type, uint32_t start_frame, uint32_t terminal_start_frame[5], uint32_t blight_start_frame, uint32_t blight_end_frame, uint32_t leave_end_frame)
+		: AssembledEvent(MultiFrameEvent{
+				.evt = {
+					.frame_number = start_frame,
+					.data = {
+						.type = type,
+					},
+				},
+				.duration = leave_end_frame - start_frame + 1,
+			})
+	{
+		for (int32_t i = 0; i < 5; i++)
+			frame_offset_terminals[i] = terminal_start_frame[i] - start_frame;
+		frame_offset_blight_start = blight_start_frame - start_frame;
+		frame_offset_blight_end = blight_end_frame - start_frame;
+	}
+	virtual uint32_t GetNumSegments() override { return 8; }
+	virtual std::string_view GetSegmentName(uint32_t idx) override
+	{
+		constexpr std::array<std::string_view, 8> names = { "T1", "T2", "T3", "T4", "T5", "To Blight", "Blight", "Leave"};
+		if (idx < uint32_t(names.size()))
+			return names[idx];
+		return "";
+	}
+	virtual uint32_t GetSegmentEndFrameOffset(uint32_t idx) override
+	{
+		if (idx < 5)
+			return frame_offset_terminals[idx];
+		else if (idx == 5)
+			return frame_offset_blight_start;
+		else if (idx == 6)
+			return frame_offset_blight_end;
+		else if (idx == 7)
 			return duration - 1;
 
 		return 0;
@@ -272,20 +322,11 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 				if ((*itor_leave_load)->evt.data.type != EventType::Load)
 					return false;
 
-				MultiFrameEvent shrine_event{
-					.evt = {
-						.frame_number = (*itor_enter_load)->evt.frame_number,
-						.data = {
-							.type = EventType::Shrine,
-						},
-					},
-					.duration = (*itor_leave_load)->LastFrame() - (*itor_enter_load)->evt.frame_number + 1,
-				};
 				// the old itor_next might be invalidated by the erases below
 				itor_next = event_set.emplace(std::make_shared<ShrineEvent>((*itor_enter_load)->evt.frame_number, (*itor_enter_load)->LastFrame(), (*itor_leave_load)->evt.frame_number, (*itor_leave_load)->LastFrame())).first;
 				event_set.erase(itor_enter_load);
-				event_set.erase(itor_blackscreen0);			// erase this before erasing itor_orb
-				event_set.erase(itor_blackscreen1);			// erase this before erasing itor_enter_load
+				event_set.erase(itor_blackscreen0);
+				event_set.erase(itor_blackscreen1);
 				event_set.erase(itor_orb);
 				event_set.erase(itor_leave_load);
 				return true;
@@ -295,6 +336,86 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 				std::cout << "Cannot assemble Shrine event from SpiritOrb event at frame " << (*itor)->evt.frame_number << std::endl;
 		}
 		itor = itor_next;
+	}
+
+	// assemble divine beast events
+	{
+		std::array<EventType, uint32_t(EventType::Max)> ability_to_divine_beast;
+		ability_to_divine_beast.fill(EventType::None);
+		ability_to_divine_beast[std::to_underlying(EventType::RevaliGale)] = EventType::Medoh;
+		ability_to_divine_beast[std::to_underlying(EventType::UrbosaFury)] = EventType::Naboris;
+		ability_to_divine_beast[std::to_underlying(EventType::MiphaGrace)] = EventType::Ruta;
+		ability_to_divine_beast[std::to_underlying(EventType::DarukProtection)] = EventType::Rudania;
+		for (auto itor = event_set.begin(); itor != event_set.end(); )
+		{
+			auto itor_next = std::next(itor);
+			EventType target_type = ability_to_divine_beast[std::to_underlying((*itor)->evt.data.type)];
+			if (target_type != EventType::None)
+			{
+				auto TryAssembleDivineBeastEvent = [target_type, &event_set, &itor_next](auto itor_ability) -> bool {
+					auto itor_cur = itor_ability;
+					
+					// SlateAuthenticated events for the 5 terminals
+					std::array<decltype(event_set.begin()), 5> itor_terminals;
+					for (uint32_t i = 0; i < 5; i++)
+					{
+						do
+						{
+							if (itor_cur == event_set.begin())
+								return false;
+							itor_cur--;
+						} while ((*itor_cur)->evt.data.type != EventType::SlateAuthenticated);
+						itor_terminals[4 - i] = itor_cur;
+					}
+
+					// GateRegistered when activating divine beast warp point
+					auto itor_enter = itor_cur;
+					do
+					{
+						if (itor_enter == event_set.begin())
+							return false;
+						itor_enter--;
+					} while ((*itor_enter)->evt.data.type != EventType::GateRegistered);
+
+					// the first BlackScreen after 5th terminal, indicating start of blight fight
+					auto itor_blight_start = itor_terminals[4];
+					do
+					{
+						if (itor_blight_start == itor_ability)
+							return false;
+						itor_blight_start++;
+					} while ((*itor_blight_start)->evt.data.type != EventType::BlackScreen);
+
+					// the first WhiteScreen after the above BlackScreen, indicating end of blight fight
+					auto itor_blight_end = itor_terminals[4];
+					do
+					{
+						if (itor_blight_end == itor_ability)
+							return false;
+						itor_blight_end++;
+					} while ((*itor_blight_end)->evt.data.type != EventType::WhiteScreen);
+
+					uint32_t terminal_start_frame[5];
+					for (uint32_t i = 0; i < 5; i++)
+						terminal_start_frame[i] = (*itor_terminals[i])->evt.frame_number;
+					// the old itor_next might be invalidated by the erases below
+					itor_next = event_set.emplace(std::make_shared<DivineBeastEvent>(target_type,
+						(*itor_enter)->evt.frame_number, terminal_start_frame,
+						(*itor_blight_start)->evt.frame_number, (*itor_blight_end)->evt.frame_number, (*itor_ability)->LastFrame())).first;
+					event_set.erase(itor_enter);
+					for (uint32_t i = 0; i < 5; i++)
+						event_set.erase(itor_terminals[i]);
+					event_set.erase(itor_blight_start);
+					event_set.erase(itor_blight_end);
+					event_set.erase(itor_ability);
+					return true;
+				};
+
+				if (!TryAssembleDivineBeastEvent(itor))
+					std::cout << "Cannot assemble " << util::GetEventText(target_type) << " event from " << util::GetEventText((*itor)->evt.data.type) << " event at frame " << (*itor)->evt.frame_number << std::endl;
+			}
+			itor = itor_next;
+		}
 	}
 
 	for (const auto& e : event_set)

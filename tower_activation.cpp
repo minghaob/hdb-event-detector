@@ -19,6 +19,40 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
 	return ret == "Sheikah Tower activated.";
 }
 
+EventType SingleLineDialogDetector::GetEvent(const cv::Mat& game_img)
+{
+	{
+		cv::Rect rect_upper = Detector::BBoxConversion<470, 810, 550, 570>(game_img.cols, game_img.rows);
+		cv::Rect rect_lower = Detector::BBoxConversion<470, 810, 620, 640>(game_img.cols, game_img.rows);
+		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+			{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0, .pixel_ratio_upper = 0.05}
+		};
+		if (!Detector::GreyscaleTest(game_img(rect_upper), crit))
+			return EventType::None;
+		if (!Detector::GreyscaleTest(game_img(rect_lower), crit))
+			return EventType::None;
+	}
+
+	cv::Rect rect = Detector::BBoxConversion<470, 810, 582, 609>(game_img.cols, game_img.rows);
+
+	cv::Mat img = game_img(rect);
+	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
+	};
+	if (!Detector::GreyscaleTest(img, crit))
+		return EventType::None;
+
+	double scale_factor = 1;
+	std::string ret = Detector::OCR(game_img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
+
+	if (ret == "Travel Gate registered to map.")
+		return EventType::GateRegistered;
+	else if (ret == "Sheikah Slate authenticated.")
+		return EventType::SlateAuthenticated;
+	
+	return EventType::None;
+}
+
 bool TravelDetector::IsTravelButtonPresent(const cv::Mat& game_img)
 {
 	cv::Rect rect_left = Detector::BBoxConversion<509, 609, 478, 504>(game_img.cols, game_img.rows);
@@ -44,10 +78,8 @@ bool TravelDetector::IsTravelButtonPresent(const cv::Mat& game_img)
 	return ret == "Travel";
 }
 
-SingleFrameEventData BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
+EventType BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
 {
-	SingleFrameEventData ret{ .type = EventType::None };
-
 	// these two bounding boxes are very conservative because many run videos have overlays at the corners
 	cv::Rect rect_top = Detector::BBoxConversion<300, 900, 50, 230>(game_img.cols, game_img.rows);
 	cv::Rect rect_bottom = Detector::BBoxConversion<480, 950, 370, 600>(game_img.cols, game_img.rows);
@@ -57,7 +89,7 @@ SingleFrameEventData BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_
 	bool top_all_black = (pixel_count[5] / double(rect_top.area()) > 0.995);
 	bool top_all_white = (pixel_count[248] / double(rect_top.area()) < 0.005);
 	if (!top_all_black && !top_all_white)
-		return { .type = EventType::None };
+		return EventType::None;
 
 	Detector::GreyscaleAccHistogram(game_img(rect_bottom), pixel_count);
 	bool bottom_all_black = (pixel_count[5] / double(rect_bottom.area()) > 0.995);
@@ -66,17 +98,17 @@ SingleFrameEventData BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_
 	if (top_all_black)
 	{
 		if (bottom_all_black)
-			return { .type = EventType::BlackScreen };
+			return EventType::BlackScreen;
 	}
 	else if (top_all_white)
 	{
 		if (bottom_all_black)
-			return { .type = EventType::LoadingScreen };
+			return EventType::LoadingScreen;
 		else if (bottom_all_white)
-			return { .type = EventType::WhiteScreen };
+			return EventType::WhiteScreen;
 	}
 
-	return { .type = EventType::None };
+	return EventType::None;
 }
 
 bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)

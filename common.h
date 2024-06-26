@@ -80,6 +80,12 @@ enum class EventType : uint8_t
 	Molduga,
 	ZoraMonument,
 	Dialog,
+	GateRegistered,
+	SlateAuthenticated,
+	RevaliGale,
+	UrbosaFury,
+	MiphaGrace,
+	DarukProtection,
 	SingleFrameEventEnd,
 
 	// assembled events
@@ -87,8 +93,11 @@ enum class EventType : uint8_t
 	Load,			// = BlackScreen + LoadScreen + BlackScreen
 	Warp,			// = TravelButton + Load
 	Shrine,			// = Load + BlackScreen + BlackScreen + SpiritOrb + Load
-	Memory,			// = AlbumPage + WhiteScreen
-	DivineBeast,	// TODO
+	Memory,			// = AlbumPage + WhiteScreen [+ WhiteScreen]
+	Medoh,			// = GateRegistered + SlateAuthenticated * 5 + BlackScreen + WhiteScreen + RevaliGale
+	Naboris,		// = GateRegistered + SlateAuthenticated * 5 + BlackScreen + WhiteScreen + UrbosaFury
+	Ruta,			// = GateRegistered + SlateAuthenticated * 5 + BlackScreen + WhiteScreen + MiphaGrace
+	Rudania,		// = GateRegistered + SlateAuthenticated * 5 + BlackScreen + WhiteScreen + DarukProtection
 	AssembledEventEnd,
 
 	Max,

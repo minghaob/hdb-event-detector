@@ -89,6 +89,10 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 	if (!album_detector.Init(lang.c_str()))
 		return;
 
+	SingleLineDialogDetector singleline_detector(shared_tess_api.API());
+	if (!singleline_detector.Init(lang.c_str()))
+		return;
+
 	cv::VideoCapture cap(video_file);
 	if (cap.isOpened())
 	{
@@ -144,24 +148,14 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				if (!cap.read(frame))
 					break;
 
-				std::string item = item_detector.GetItem(frame(game_rect));
-				if (!item.empty())
 				{
-					if (item == "Korok Seed")
+					EventType type = item_detector.GetEvent(frame(game_rect));
+					if (type != EventType::None)
 					{
 						outEvents.push_back({
 							.frame_number = cur_frame,
 							.data = {
-								.type = EventType::Korok,
-							},
-						});
-					}
-					else if (item == "Spirit Orb")
-					{
-						outEvents.push_back({
-							.frame_number = cur_frame,
-							.data = {
-								.type = EventType::SpiritOrb,
+								.type = type,
 							},
 						});
 					}
@@ -188,12 +182,27 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				}
 
 				{
-					SingleFrameEventData data = bwl_detector.GetEvent(frame(game_rect));
-					if (data.type != EventType::None)
+					EventType type = bwl_detector.GetEvent(frame(game_rect));
+					if (type != EventType::None)
 					{
 						outEvents.push_back({
 							.frame_number = cur_frame,
-							.data = data,
+							.data = {
+								.type = type,
+							},
+						});
+					}
+				}
+
+				{
+					EventType type = singleline_detector.GetEvent(frame(game_rect));
+					if (type != EventType::None)
+					{
+						outEvents.push_back({
+							.frame_number = cur_frame,
+							.data = {
+								.type = type,
+							},
 						});
 					}
 				}

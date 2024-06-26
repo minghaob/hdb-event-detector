@@ -17,8 +17,26 @@ public:
 		return true;
 	}
 
-	// returns true if has tower activation dialog
 	bool IsActivatingTower(const cv::Mat& game_img);
+};
+
+
+class SingleLineDialogDetector
+{
+private:
+	tesseract::TessBaseAPI& _tess_api;
+
+public:
+	SingleLineDialogDetector(tesseract::TessBaseAPI& api)
+		: _tess_api(api) {
+	}
+	~SingleLineDialogDetector() = default;
+
+	bool Init(const char* lang) {
+		return true;
+	}
+
+	EventType GetEvent(const cv::Mat& game_img);
 };
 
 
@@ -37,7 +55,6 @@ public:
 		return true;
 	}
 
-	// returns true if travel button is present
 	bool IsTravelButtonPresent(const cv::Mat& game_img);
 };
 
@@ -56,8 +73,7 @@ public:
 		return true;
 	}
 
-	// returns true if travel button is present
-	SingleFrameEventData GetEvent(const cv::Mat& game_img);
+	EventType GetEvent(const cv::Mat& game_img);
 };
 
 class AlbumPageDetector
@@ -75,6 +91,5 @@ public:
 		return true;
 	}
 
-	// returns true if travel button is present
 	bool IsOnAlbumPage(const cv::Mat& game_img);
 };

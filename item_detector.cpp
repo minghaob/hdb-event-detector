@@ -8,31 +8,29 @@ ItemDetector::ItemDetector(tesseract::TessBaseAPI& api)
 
 bool ItemDetector::Init(const char* lang)
 {
-	if (!InitItemList(lang))
-		return false;
-
 	return true;
 }
 
-bool ItemDetector::InitItemList(const char* lang)
-{
-	_items.emplace_back("Korok Seed");
-	_items.emplace_back("Spirit Orb");
+static std::vector<std::pair<EventType, std::string_view>> _items= {
+	{ EventType::Korok, "Korok Seed" },
+	{ EventType::SpiritOrb, "Spirit Orb" },
+	{ EventType::RevaliGale, "Revali's Gale" },
+	{ EventType::UrbosaFury, "Urbosa's Fury" },
+	{ EventType::MiphaGrace, "Mipha's Grace" },
+	{ EventType::DarukProtection, "Daruk's Protection" },
+};
 
-	return true;
-}
-
-std::string ItemDetector::FindBestMatch(const std::string& str)
+EventType ItemDetector::ItemNameToEventType(const std::string& str)
 {
 	for (const auto& item : _items)
 	{
-		if (item == str)
-			return str;
+		if (item.second == str)
+			return item.first;
 	}
-	return "";
+	return EventType::None;
 }
 
-std::string ItemDetector::GetItem(const cv::Mat& game_img)
+EventType ItemDetector::GetEvent(const cv::Mat& game_img)
 {
 	cv::Rect rect = Detector::BBoxConversion<528, 900, 264, 297>(game_img.cols, game_img.rows);
 
@@ -45,10 +43,10 @@ std::string ItemDetector::GetItem(const cv::Mat& game_img)
 		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.155, .pixel_ratio_upper = 0.27},
 	};
 	if (!Detector::GreyscaleTest(img, crit))
-		return "";
+		return EventType::None;
 
 	double scale_factor = 1;
 	std::string ret = Detector::OCR(game_img(rect), scale_factor, 204, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
 
-	return FindBestMatch(ret);
+	return ItemNameToEventType(ret);
 }
