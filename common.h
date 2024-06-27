@@ -111,6 +111,7 @@ namespace util
 	 */
 	uint32_t GetStringEditDistance(const std::string& first, const std::string& second, uint32_t max_allowed_edits);
 
+	void UnifyAmbiguousChars(std::string& str);
 
 	/**
 	 * Reorder channels of an opencv Mat in BGRA format to Leptonica RGBA order

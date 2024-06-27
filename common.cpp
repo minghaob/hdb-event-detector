@@ -97,6 +97,17 @@ uint32_t GetStringEditDistance(const std::string& first, const std::string& seco
 	return T[m * (n + 1) + n];
 }
 
+void UnifyAmbiguousChars(std::string& str)
+{
+	for (uint32_t i = 0; i < (uint32_t)str.size(); i++)
+	{
+		if (str[i] == ',')
+			str[i] = '.';
+		if (str[i] == 'I' || str[i] == '!')
+			str[i] = 'l';
+	}
+}
+
 void OpenCvMatBGRAToLeptonicaRGBAInplace(cv::Mat& frame)
 {
 	//                 byte[0] byte[1] byte[2] byte[3]

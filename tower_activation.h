@@ -36,9 +36,26 @@ public:
 		return true;
 	}
 
-	EventType GetEvent(const cv::Mat& game_img);
+	SingleFrameEventData GetEvent(const cv::Mat& game_img);
 };
 
+class ZoraMonumentDetector
+{
+private:
+	tesseract::TessBaseAPI& _tess_api;
+	std::array<std::string, 10> _line1_texts;
+
+public:
+	ZoraMonumentDetector(tesseract::TessBaseAPI& api)
+		: _tess_api(api) {
+	}
+	~ZoraMonumentDetector() = default;
+
+	bool Init(const char* lang);
+
+	// returns 0 if not at a monument
+	uint8_t GetMonumentID(const cv::Mat& game_img);
+};
 
 class TravelDetector
 {

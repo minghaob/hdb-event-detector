@@ -93,6 +93,10 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 	if (!singleline_detector.Init(lang.c_str()))
 		return;
 
+	ZoraMonumentDetector zm_detector(shared_tess_api.API());
+	if (!zm_detector.Init(lang.c_str()))
+		return;
+
 	cv::VideoCapture cap(video_file);
 	if (cap.isOpened())
 	{
@@ -148,8 +152,9 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				if (!cap.read(frame))
 					break;
 
+				cv::Mat game_frame = frame(game_rect);
 				{
-					EventType type = item_detector.GetEvent(frame(game_rect));
+					EventType type = item_detector.GetEvent(game_frame);
 					if (type != EventType::None)
 					{
 						outEvents.push_back({
@@ -161,7 +166,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					}
 				}
 
-				if (tower_detector.IsActivatingTower(frame(game_rect)))
+				if (tower_detector.IsActivatingTower(game_frame))
 				{
 					outEvents.push_back({
 						.frame_number = cur_frame,
@@ -171,7 +176,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					});
 				}
 
-				if (travel_detector.IsTravelButtonPresent(frame(game_rect)))
+				if (travel_detector.IsTravelButtonPresent(game_frame))
 				{
 					outEvents.push_back({
 						.frame_number = cur_frame,
@@ -182,7 +187,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				}
 
 				{
-					EventType type = bwl_detector.GetEvent(frame(game_rect));
+					EventType type = bwl_detector.GetEvent(game_frame);
 					if (type != EventType::None)
 					{
 						outEvents.push_back({
@@ -195,19 +200,17 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				}
 
 				{
-					EventType type = singleline_detector.GetEvent(frame(game_rect));
-					if (type != EventType::None)
+					SingleFrameEventData evt = singleline_detector.GetEvent(game_frame);
+					if (evt.type != EventType::None)
 					{
 						outEvents.push_back({
 							.frame_number = cur_frame,
-							.data = {
-								.type = type,
-							},
+							.data = evt,
 						});
 					}
 				}
 
-				if (album_detector.IsOnAlbumPage(frame(game_rect)))
+				if (album_detector.IsOnAlbumPage(game_frame))
 				{
 					outEvents.push_back({
 						.frame_number = cur_frame,
@@ -215,6 +218,22 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 							.type = EventType::AlbumPage,
 						},
 					});
+				}
+
+				{
+					uint8_t id = zm_detector.GetMonumentID(game_frame);
+					if (id >= 1 && id <= 10)
+					{
+						outEvents.push_back({
+							.frame_number = cur_frame,
+							.data = {
+								.type = EventType::ZoraMonument,
+								.monument_data = {
+									.monument_id = id,
+								},
+							},
+						});
+					}
 				}
 
 				num_frame_parsed++;

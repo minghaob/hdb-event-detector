@@ -17,6 +17,7 @@ namespace __details
 		{ EventType::BlackScreen,			5 },
 		{ EventType::WhiteScreen,			5 },
 		{ EventType::AlbumPage,				30 },
+		{ EventType::ZoraMonument,			30 },
 		{ EventType::GateRegistered,		30 },
 		{ EventType::SlateAuthenticated,	30 },
 		{ EventType::RevaliGale,			30 },
@@ -86,7 +87,17 @@ std::string EventDeduper::DedupedEventsToYAMLString(std::vector<MultiFrameEvent>
 	os << "---" << std::endl;
 	os << "events:" << std::endl;
 	for (const auto& itor : deduped_events)
-		os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << util::GetEventText(itor.evt.data.type) << "\"]" << std::endl;
+	{
+		os << "  - [[" << itor.evt.frame_number << ", " << itor.evt.frame_number + itor.duration - 1 << "], \"" << util::GetEventText(itor.evt.data.type) << "\"";
+		switch (itor.evt.data.type)
+		{
+		case EventType::ZoraMonument:
+			os << ", " << uint32_t(itor.evt.data.monument_data.monument_id);
+		default:
+			break;
+		}
+		os << "]" << std::endl;
+	}
 
 	return os.str();
 }
@@ -431,6 +442,14 @@ std::string EventAssembler::AssembledEventsToYAMLString(const std::vector<std::s
 	{
 		os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
 		os << "    type: \"" << util::GetEventText(itor->evt.data.type) << "\"" << std::endl;
+		switch (itor->evt.data.type)
+		{
+		case EventType::ZoraMonument:
+			os << "    id: " << uint32_t(itor->evt.data.monument_data.monument_id) << std::endl;
+			break;
+		default:
+			break;
+		}
 		if (itor->GetNumSegments() > 1)
 		{
 			os << "    segments: [";
