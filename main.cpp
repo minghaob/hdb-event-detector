@@ -487,5 +487,29 @@ int main(int argc, char* argv[])
 	for (auto& itor : event_counter)
 		std::cout << util::GetEventText(itor.first) << ": " << itor.second << std::endl;
 
+	if (yaml_file_path.filename() == "run.yaml")
+	{
+		std::pair<EventType, uint32_t> expected_count[] = {
+			{ EventType::Korok, 900},
+			{ EventType::Shrine, 120},
+			{ EventType::TowerActivation, 15},
+			{ EventType::Memory, 12},
+			{ EventType::ZoraMonument, 10},
+			{ EventType::Medoh, 1},
+			{ EventType::Naboris, 1},
+			{ EventType::Ruta, 1},
+			{ EventType::Rudania, 1},
+			{ EventType::Paraglider, 1},
+			{ EventType::ThunderHelm, 1},
+		};
+
+		for (uint32_t i = 0; i < uint32_t(sizeof(expected_count) / sizeof(expected_count[0])); i++)
+		{
+			auto itor = event_counter.find(expected_count[i].first);
+			if (itor == event_counter.end() || itor->second != expected_count[i].second)
+				std::cout << "!!! " << util::GetEventText(expected_count[i].first) << " count not as expected (" << expected_count[i].second << ")" << std::endl;
+		}
+	}
+
 	return 0;
 }
