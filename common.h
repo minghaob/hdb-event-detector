@@ -86,6 +86,8 @@ enum class EventType : uint8_t
 	UrbosaFury,
 	MiphaGrace,
 	DarukProtection,
+	Paraglider,
+	ThunderHelm,
 	SingleFrameEventEnd,
 
 	// assembled events

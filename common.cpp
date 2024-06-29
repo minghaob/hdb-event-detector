@@ -23,6 +23,8 @@ namespace __details{
 		{ EventType::UrbosaFury,			"Urbosa Fury" },
 		{ EventType::MiphaGrace,			"Mipha Grace" },
 		{ EventType::DarukProtection,		"Daruk Protection" },
+		{ EventType::Paraglider,			"Paraglider" },
+		{ EventType::ThunderHelm,			"Thunder Helm" },
 		{ EventType::Load,					"Load" },
 		{ EventType::Warp,					"Warp" },
 		{ EventType::Shrine,				"Shrine" },

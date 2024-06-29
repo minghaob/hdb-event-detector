@@ -24,6 +24,8 @@ namespace __details
 		{ EventType::UrbosaFury,			30 },
 		{ EventType::MiphaGrace,			30 },
 		{ EventType::DarukProtection,		30 },
+		{ EventType::Paraglider,			30 },
+		{ EventType::ThunderHelm,			90 },
 	});
 
 	static consteval std::array<uint32_t, uint32_t(EventType::Max)> CreateMinimalSpacingArray()
