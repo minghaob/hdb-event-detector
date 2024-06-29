@@ -40,8 +40,8 @@ EventType ItemDetector::GetEvent(const cv::Mat& game_img)
 	cv::Rect rect_test = rect;
 	rect_test.width /= 3;
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
-		{.brightness_range_lower = 0, .brightness_range_upper = 179, .pixel_ratio_lower = 0.5, .pixel_ratio_upper = 1},
-		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.155, .pixel_ratio_upper = 0.27},
+		{.brightness_range_lower = 0, .brightness_range_upper = 179, .pixel_ratio_lower = 0.45, .pixel_ratio_upper = 1},
+		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.155, .pixel_ratio_upper = 0.35},
 	};
 	if (!Detector::GreyscaleTest(game_img(rect_test), crit))
 		return EventType::None;
