@@ -61,7 +61,7 @@ static_assert(__details::VerifyMsgTable(event_message));
 namespace util
 {
 
-uint32_t GetStringEditDistance(const std::string& first, const std::string& second, uint32_t max_allowed_edits)
+uint32_t GetStringEditDistance(const std::string_view& first, const std::string_view& second, uint32_t max_allowed_edits)
 {
 	uint32_t m = uint32_t(first.length());
 	uint32_t n = uint32_t(second.length());

@@ -111,7 +111,7 @@ namespace util
 	 * Get the edit distance between two strings.
 	 * if the distance is larger than max_allowed_edits, returns max_allowed_edits + 1
 	 */
-	uint32_t GetStringEditDistance(const std::string& first, const std::string& second, uint32_t max_allowed_edits);
+	uint32_t GetStringEditDistance(const std::string_view& first, const std::string_view& second, uint32_t max_allowed_edits);
 
 	void UnifyAmbiguousChars(std::string& str);
 

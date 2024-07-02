@@ -101,7 +101,7 @@ uint8_t ZoraMonumentDetector::GetMonumentID(const cv::Mat& game_img)
 	util::UnifyAmbiguousChars(ret);
 
 	for (uint32_t i = 0; i < uint32_t(_line1_texts.size()); i++)
-		if (ret.starts_with(_line1_texts[i]))
+		if (ret.size() >= _line1_texts[i].size() && util::GetStringEditDistance(std::string_view(ret).substr(0, _line1_texts[i].size()), _line1_texts[i], 2) <= 2)
 			return uint8_t(i + 1);
 
 	return 0;
