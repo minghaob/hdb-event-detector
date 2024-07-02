@@ -449,7 +449,7 @@ int main(int argc, char* argv[])
 		{
 			std::string yaml_str = std::move(EventDeduper::DedupedEventsToYAMLString(deduped_events));
 
-			fs::path deduped_path = yaml_path / ("deduped_" + std::to_string(i) + ".yaml");		// raw files start at 01
+			fs::path deduped_path = yaml_path / ("deduped_" + std::to_string(i) + ".yaml");
 			if (yaml_file_path.filename() == "run.yaml")
 			{
 				std::ofstream ofs(deduped_path.string());
@@ -467,7 +467,7 @@ int main(int argc, char* argv[])
 		{
 			std::string yaml_str = std::move(EventAssembler::AssembledEventsToYAMLString(assembled_events));
 
-			fs::path assembled_path = yaml_path / ("assembled_" + std::to_string(i) + ".yaml");		// raw files start at 01
+			fs::path assembled_path = yaml_path / ("assembled_" + std::to_string(i) + ".yaml");
 			if (yaml_file_path.filename() == "run.yaml")
 			{
 				std::ofstream ofs(assembled_path.string());

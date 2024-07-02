@@ -442,27 +442,28 @@ std::string EventAssembler::AssembledEventsToYAMLString(const std::vector<std::s
 	os << "events:" << std::endl;
 	for (const auto& itor : assembled_events)
 	{
-		os << "  - frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]" << std::endl;
-		os << "    type: \"" << util::GetEventText(itor->evt.data.type) << "\"" << std::endl;
+		os << "  - {frame: [" << itor->evt.frame_number << ", " << itor->evt.frame_number + itor->duration - 1 << "]";
+		os << ", type: \"" << util::GetEventText(itor->evt.data.type) << "\"";
 		switch (itor->evt.data.type)
 		{
 		case EventType::ZoraMonument:
-			os << "    id: " << uint32_t(itor->evt.data.monument_data.monument_id) << std::endl;
+			os << ", id: " << uint32_t(itor->evt.data.monument_data.monument_id);
 			break;
 		default:
 			break;
 		}
 		if (itor->GetNumSegments() > 1)
 		{
-			os << "    segments: [";
+			os << ", segments: [";
 			for (uint32_t i = 0; i < itor->GetNumSegments(); i++)
 			{
 				if (i > 0)
 					os << ", ";
 				os << "[" << itor->GetSegmentEndFrameOffset(i) + itor->evt.frame_number << ", \"" << itor->GetSegmentName(i) << "\"]";
 			}
-			os << ']' << std::endl;
+			os << ']';
 		}
+		os << "}" << std::endl;
 	}
 	
 	return os.str();
