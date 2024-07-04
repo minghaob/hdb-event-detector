@@ -140,13 +140,13 @@ EventType BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
 
 	std::array<uint32_t, 256> pixel_count;
 	Detector::GreyscaleAccHistogram(game_img(rect_top), pixel_count);
-	bool top_all_black = (pixel_count[5] / double(rect_top.area()) > 0.995);
+	bool top_all_black = (pixel_count[9] / double(rect_top.area()) > 0.995);
 	bool top_all_white = (pixel_count[248] / double(rect_top.area()) < 0.005);
 	if (!top_all_black && !top_all_white)
 		return EventType::None;
 
 	Detector::GreyscaleAccHistogram(game_img(rect_bottom), pixel_count);
-	bool bottom_all_black = (pixel_count[5] / double(rect_bottom.area()) > 0.995);
+	bool bottom_all_black = (pixel_count[9] / double(rect_bottom.area()) > 0.995);
 	bool bottom_all_white = (pixel_count[248] / double(rect_bottom.area()) < 0.005);
 
 	if (top_all_black)
@@ -178,7 +178,7 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 			return false;
 		if (pixel_count[1][230] / double(rect_l.area()) < 0.9)			// no pixel has green channel > 230
 			return false;
-		if (pixel_count[0][150] / double(rect_l.area()) > 0.1)			// most pixels have blue channel > 150
+		if (pixel_count[0][150] / double(rect_l.area()) > 0.15)			// most pixels have blue channel > 150
 			return false;
 
 		Detector::BGRAccHistogram(game_img(rect_r), pixel_count);
@@ -186,7 +186,7 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 			return false;
 		if (pixel_count[1][230] / double(rect_r.area()) < 0.9)			// no pixel has green channel > 230
 			return false;
-		if (pixel_count[0][150] / double(rect_r.area()) > 0.1)			// most pixels have blue channel > 150
+		if (pixel_count[0][150] / double(rect_r.area()) > 0.15)			// most pixels have blue channel > 150
 			return false;
 	}
 	{
