@@ -417,7 +417,9 @@ int main(int argc, char* argv[])
 				{
 					for (uint32_t frame = patch.evt.frame_number; frame <= patch.end_frame; frame++)
 					{
-						merged_events.emplace(frame, patch.evt);
+						SingleFrameEvent evt = patch.evt;
+						evt.frame_number = frame;
+						merged_events.emplace(frame, evt);
 						num_added_events++;
 					}
 				}
