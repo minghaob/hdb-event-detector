@@ -16,5 +16,5 @@ public:
 	~ItemDetector() = default;
 	bool Init(const char* lang);
 
-	EventType GetEvent(const cv::Mat& game_img);
+	EventType GetEvent(const cv::Mat& img, const cv::Rect &game_rect);
 };

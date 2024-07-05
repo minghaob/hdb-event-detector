@@ -17,7 +17,7 @@ public:
 		return true;
 	}
 
-	bool IsActivatingTower(const cv::Mat& game_img);
+	bool IsActivatingTower(const cv::Mat& img, const cv::Rect& game_rect);
 };
 
 
@@ -36,7 +36,7 @@ public:
 		return true;
 	}
 
-	SingleFrameEventData GetEvent(const cv::Mat& game_img);
+	SingleFrameEventData GetEvent(const cv::Mat& img, const cv::Rect& game_rect);
 };
 
 class ZoraMonumentDetector
@@ -54,7 +54,7 @@ public:
 	bool Init(const char* lang);
 
 	// returns 0 if not at a monument
-	uint8_t GetMonumentID(const cv::Mat& game_img);
+	uint8_t GetMonumentID(const cv::Mat& img, const cv::Rect& game_rect);
 };
 
 class TravelDetector
@@ -72,7 +72,7 @@ public:
 		return true;
 	}
 
-	bool IsTravelButtonPresent(const cv::Mat& game_img);
+	bool IsTravelButtonPresent(const cv::Mat& img, const cv::Rect& game_rect);
 };
 
 class BlackWhiteLoadScreenDetector
@@ -90,7 +90,7 @@ public:
 		return true;
 	}
 
-	EventType GetEvent(const cv::Mat& game_img);
+	EventType GetEvent(const cv::Mat& img, const cv::Rect& game_rect);
 };
 
 class AlbumPageDetector
@@ -108,5 +108,5 @@ public:
 		return true;
 	}
 
-	bool IsOnAlbumPage(const cv::Mat& game_img);
+	bool IsOnAlbumPage(const cv::Mat& img, const cv::Rect& game_rect);
 };

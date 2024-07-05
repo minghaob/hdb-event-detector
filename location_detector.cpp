@@ -69,22 +69,21 @@ std::string LocationDetector::FindBestLocationMatch(const std::string& loc_in)
 	return candidate;
 }
 
-std::string LocationDetector::GetLocation(const cv::Mat& game_img)
+std::string LocationDetector::GetLocation(const cv::Mat& img, const cv::Rect &game_rect)
 {
-	cv::Rect rect = Detector::BBoxConversion<49, 644, 603, 667>(game_img.cols, game_img.rows);
+	cv::Rect rect = Detector::BBoxConversion<49, 644, 603, 667>(img.cols, img.rows, game_rect);
 
 	// Peek the left-most quarter of the location frame, the shorted location name is "Docks", which is about this wide
 	cv::Rect rect_test = rect;
 	rect_test.width /= 4;
-	cv::Mat img = game_img(rect_test);
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 		{.brightness_range_lower = 241, .brightness_range_upper = 255, .pixel_ratio_lower = 0.15, .pixel_ratio_upper = 0.3}
 	};
-	if (!Detector::GreyscaleTest(img, crit))
+	if (!Detector::GreyscaleTest(img(rect_test), crit))
 		return "";
 
-	double scale_factor = std::max(game_img.cols / 480.0, 1.0);	// according to experiments, it's still possible to recognize the location with high accuracy when the width of the game screen is 480.
-	std::string ret = Detector::OCR(game_img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
+	double scale_factor = std::max(img.cols / 480.0, 1.0);	// according to experiments, it's still possible to recognize the location with high accuracy when the width of the game screen is 480.
+	std::string ret = Detector::OCR(img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
 
 	// some post-process
 	{

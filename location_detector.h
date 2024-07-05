@@ -26,5 +26,5 @@ public:
 	bool Init(const char* lang);
 
 	// returns empty string if nothing is detected
-	std::string GetLocation(const cv::Mat& game_img);
+	std::string GetLocation(const cv::Mat& img, const cv::Rect &game_rect);
 };

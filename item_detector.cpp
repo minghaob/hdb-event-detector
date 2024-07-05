@@ -32,9 +32,9 @@ EventType ItemDetector::ItemNameToEventType(const std::string& str)
 	return EventType::None;
 }
 
-EventType ItemDetector::GetEvent(const cv::Mat& game_img)
+EventType ItemDetector::GetEvent(const cv::Mat& img, const cv::Rect & game_rect)
 {
-	cv::Rect rect = Detector::BBoxConversion<528, 900, 264, 297>(game_img.cols, game_img.rows);
+	cv::Rect rect = Detector::BBoxConversion<528, 900, 264, 297>(img.cols, img.rows, game_rect);
 
 	// Peek the left-most third of the bbox, the items we want to detect are at least this wide
 	cv::Rect rect_test = rect;
@@ -43,11 +43,11 @@ EventType ItemDetector::GetEvent(const cv::Mat& game_img)
 		{.brightness_range_lower = 0, .brightness_range_upper = 179, .pixel_ratio_lower = 0.45, .pixel_ratio_upper = 1},
 		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.155, .pixel_ratio_upper = 0.35},
 	};
-	if (!Detector::GreyscaleTest(game_img(rect_test), crit))
+	if (!Detector::GreyscaleTest(img(rect_test), crit))
 		return EventType::None;
 
 	double scale_factor = 1;
-	std::string item_name = Detector::OCR(game_img(rect), scale_factor, 204, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
+	std::string item_name = Detector::OCR(img(rect), scale_factor, 204, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'- ");
 
 	EventType ret = ItemNameToEventType(item_name);
 
@@ -55,11 +55,11 @@ EventType ItemDetector::GetEvent(const cv::Mat& game_img)
 	// we want to detect the one from Kohga, which has "Inventory" text and a "+" icon at the lower-right corner of the item popup window
 	if (ret == EventType::ThunderHelm)
 	{
-		cv::Rect plus_icon_rect = Detector::BBoxConversion<893, 910, 409, 426>(game_img.cols, game_img.rows);
+		cv::Rect plus_icon_rect = Detector::BBoxConversion<893, 910, 409, 426>(img.cols, img.rows, game_rect);
 		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 			{.brightness_range_lower = 180, .brightness_range_upper = 255, .pixel_ratio_lower = 0.5, .pixel_ratio_upper = 1},
 		};
-		if (!Detector::GreyscaleTest(game_img(plus_icon_rect), crit))
+		if (!Detector::GreyscaleTest(img(plus_icon_rect), crit))
 			return EventType::None;
 	}
 	return ret;

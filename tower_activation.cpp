@@ -2,48 +2,46 @@
 #include "detector.h"
 
 
-bool TowerActivationDetector::IsActivatingTower(const cv::Mat& game_img)
+bool TowerActivationDetector::IsActivatingTower(const cv::Mat& img, const cv::Rect& game_rect)
 {
-	cv::Rect rect = Detector::BBoxConversion<504, 777, 582, 609>(game_img.cols, game_img.rows);
+	cv::Rect rect = Detector::BBoxConversion<504, 777, 582, 609>(img.cols, img.rows, game_rect);
 
-	cv::Mat img = game_img(rect);
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.15, .pixel_ratio_upper = 0.23}
 	};
-	if (!Detector::GreyscaleTest(img, crit))
+	if (!Detector::GreyscaleTest(img(rect), crit))
 		return false;
 
 	double scale_factor = 1;
-	std::string ret = Detector::OCR(game_img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
+	std::string ret = Detector::OCR(img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
 	return ret == "Sheikah Tower activated.";
 }
 
-SingleFrameEventData SingleLineDialogDetector::GetEvent(const cv::Mat& game_img)
+SingleFrameEventData SingleLineDialogDetector::GetEvent(const cv::Mat& img, const cv::Rect& game_rect)
 {
 	{
-		cv::Rect rect_upper = Detector::BBoxConversion<470, 810, 550, 570>(game_img.cols, game_img.rows);
-		cv::Rect rect_lower = Detector::BBoxConversion<470, 810, 620, 640>(game_img.cols, game_img.rows);
+		cv::Rect rect_upper = Detector::BBoxConversion<470, 810, 550, 570>(img.cols, img.rows, game_rect);
+		cv::Rect rect_lower = Detector::BBoxConversion<470, 810, 620, 640>(img.cols, img.rows, game_rect);
 		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 			{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0, .pixel_ratio_upper = 0.05}
 		};
-		if (!Detector::GreyscaleTest(game_img(rect_upper), crit))
+		if (!Detector::GreyscaleTest(img(rect_upper), crit))
 			return { .type = EventType::None };
-		if (!Detector::GreyscaleTest(game_img(rect_lower), crit))
+		if (!Detector::GreyscaleTest(img(rect_lower), crit))
 			return { .type = EventType::None };
 	}
 
-	cv::Rect rect = Detector::BBoxConversion<470, 810, 582, 609>(game_img.cols, game_img.rows);
+	cv::Rect rect = Detector::BBoxConversion<470, 810, 582, 609>(img.cols, img.rows, game_rect);
 
-	cv::Mat img = game_img(rect);
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
 	};
-	if (!Detector::GreyscaleTest(img, crit))
+	if (!Detector::GreyscaleTest(img(rect), crit))
 		return { .type = EventType::None };
 
 	double scale_factor = 1;
-	std::string ret = Detector::OCR(game_img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
+	std::string ret = Detector::OCR(img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
 	if (ret == "Travel Gate registered to map.")
 		return { .type = EventType::GateRegistered };
@@ -75,29 +73,29 @@ bool ZoraMonumentDetector::Init(const char* lang)
 	return true;
 }
 
-uint8_t ZoraMonumentDetector::GetMonumentID(const cv::Mat& game_img)
+uint8_t ZoraMonumentDetector::GetMonumentID(const cv::Mat& img, const cv::Rect& game_rect)
 {
 	{
-		cv::Rect rect_upper = Detector::BBoxConversion<420, 870, 305, 315>(game_img.cols, game_img.rows);
+		cv::Rect rect_upper = Detector::BBoxConversion<420, 870, 305, 315>(img.cols, img.rows, game_rect);
 		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 			{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0, .pixel_ratio_upper = 0.02}
 		};
-		if (!Detector::GreyscaleTest(game_img(rect_upper), crit))
+		if (!Detector::GreyscaleTest(img(rect_upper), crit))
 			return 0;
 	}
 
 	{
-		cv::Rect rect_line1_middle = Detector::BBoxConversion<460, 810, 320, 348>(game_img.cols, game_img.rows);
+		cv::Rect rect_line1_middle = Detector::BBoxConversion<460, 810, 320, 348>(img.cols, img.rows, game_rect);
 		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 			{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
 		};
-		if (!Detector::GreyscaleTest(game_img(rect_line1_middle), crit))
+		if (!Detector::GreyscaleTest(img(rect_line1_middle), crit))
 			return 0;
 	}
 
-	cv::Rect rect_line1 = Detector::BBoxConversion<420, 870, 320, 348>(game_img.cols, game_img.rows);
+	cv::Rect rect_line1 = Detector::BBoxConversion<420, 870, 320, 348>(img.cols, img.rows, game_rect);
 	double scale_factor = 1;
-	std::string ret = Detector::OCR(game_img(rect_line1), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz,.-! ");
+	std::string ret = Detector::OCR(img(rect_line1), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz,.-! ");
 	util::UnifyAmbiguousChars(ret);
 
 	for (uint32_t i = 0; i < uint32_t(_line1_texts.size()); i++)
@@ -107,45 +105,45 @@ uint8_t ZoraMonumentDetector::GetMonumentID(const cv::Mat& game_img)
 	return 0;
 }
 
-bool TravelDetector::IsTravelButtonPresent(const cv::Mat& game_img)
+bool TravelDetector::IsTravelButtonPresent(const cv::Mat& img, const cv::Rect& game_rect)
 {
-	cv::Rect rect_left = Detector::BBoxConversion<509, 609, 478, 504>(game_img.cols, game_img.rows);
-	cv::Rect rect_middle = Detector::BBoxConversion<610, 672, 478, 504>(game_img.cols, game_img.rows);
-	cv::Rect rect_right = Detector::BBoxConversion<673, 771, 478, 504>(game_img.cols, game_img.rows);
+	cv::Rect rect_left = Detector::BBoxConversion<509, 609, 478, 504>(img.cols, img.rows, game_rect);
+	cv::Rect rect_middle = Detector::BBoxConversion<610, 672, 478, 504>(img.cols, img.rows, game_rect);
+	cv::Rect rect_right = Detector::BBoxConversion<673, 771, 478, 504>(img.cols, img.rows, game_rect);
 
 	static const std::vector<Detector::GreyScaleTestCriteria> crit_sides = {
 		{.brightness_range_lower = 0, .brightness_range_upper = 100, .pixel_ratio_lower = 0.98, .pixel_ratio_upper = 1.0}
 	};
-	if (!Detector::GreyscaleTest(game_img(rect_left), crit_sides))
+	if (!Detector::GreyscaleTest(img(rect_left), crit_sides))
 		return false;
-	if (!Detector::GreyscaleTest(game_img(rect_right), crit_sides))
+	if (!Detector::GreyscaleTest(img(rect_right), crit_sides))
 		return false;
 	static const std::vector<Detector::GreyScaleTestCriteria> crit_middle = {
 		{.brightness_range_lower = 140, .brightness_range_upper = 255, .pixel_ratio_lower = 0.2, .pixel_ratio_upper = 0.3}
 	};
-	if (!Detector::GreyscaleTest(game_img(rect_middle), crit_middle))
+	if (!Detector::GreyscaleTest(img(rect_middle), crit_middle))
 		return false;
 
 	double scale_factor = 1;
-	std::string ret = Detector::OCR(game_img(rect_middle), scale_factor, 140, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
+	std::string ret = Detector::OCR(img(rect_middle), scale_factor, 140, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
 	return ret == "Travel";
 }
 
-EventType BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
+EventType BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& img, const cv::Rect& game_rect)
 {
 	// these two bounding boxes are very conservative because many run videos have overlays at the corners
-	cv::Rect rect_top = Detector::BBoxConversion<300, 900, 50, 230>(game_img.cols, game_img.rows);
-	cv::Rect rect_bottom = Detector::BBoxConversion<480, 950, 370, 600>(game_img.cols, game_img.rows);
+	cv::Rect rect_top = Detector::BBoxConversion<300, 900, 50, 230>(img.cols, img.rows, game_rect);
+	cv::Rect rect_bottom = Detector::BBoxConversion<480, 950, 370, 600>(img.cols, img.rows, game_rect);
 
 	std::array<uint32_t, 256> pixel_count;
-	Detector::GreyscaleAccHistogram(game_img(rect_top), pixel_count);
+	Detector::GreyscaleAccHistogram(img(rect_top), pixel_count);
 	bool top_all_black = (pixel_count[9] / double(rect_top.area()) > 0.995);
 	bool top_all_white = (pixel_count[248] / double(rect_top.area()) < 0.005);
 	if (!top_all_black && !top_all_white)
 		return EventType::None;
 
-	Detector::GreyscaleAccHistogram(game_img(rect_bottom), pixel_count);
+	Detector::GreyscaleAccHistogram(img(rect_bottom), pixel_count);
 	bool bottom_all_black = (pixel_count[9] / double(rect_bottom.area()) > 0.995);
 	bool bottom_all_white = (pixel_count[248] / double(rect_bottom.area()) < 0.005);
 
@@ -165,15 +163,15 @@ EventType BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& game_img)
 	return EventType::None;
 }
 
-bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
+bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& img, const cv::Rect& game_rect)
 {
 	{
-		cv::Rect rect_l = Detector::BBoxConversion<482, 497, 32, 46>(game_img.cols, game_img.rows);			// L button
-		cv::Rect rect_r = Detector::BBoxConversion<780, 795, 32, 46>(game_img.cols, game_img.rows);			// R button
+		cv::Rect rect_l = Detector::BBoxConversion<482, 497, 32, 46>(img.cols, img.rows, game_rect);			// L button
+		cv::Rect rect_r = Detector::BBoxConversion<780, 795, 32, 46>(img.cols, img.rows, game_rect);			// R button
 
 		std::array<std::array<uint32_t, 256>, 3> pixel_count;
 
-		Detector::BGRAccHistogram(game_img(rect_l), pixel_count);
+		Detector::BGRAccHistogram(img(rect_l), pixel_count);
 		if (pixel_count[2][128] / double(rect_l.area()) < 0.9)			// no pixel has red channel > 128
 			return false;
 		if (pixel_count[1][230] / double(rect_l.area()) < 0.9)			// no pixel has green channel > 230
@@ -181,7 +179,7 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 		if (pixel_count[0][150] / double(rect_l.area()) > 0.15)			// most pixels have blue channel > 150
 			return false;
 
-		Detector::BGRAccHistogram(game_img(rect_r), pixel_count);
+		Detector::BGRAccHistogram(img(rect_r), pixel_count);
 		if (pixel_count[2][128] / double(rect_r.area()) < 0.9)			// no pixel has red channel > 128
 			return false;
 		if (pixel_count[1][230] / double(rect_r.area()) < 0.9)			// no pixel has green channel > 230
@@ -190,22 +188,22 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 			return false;
 	}
 	{
-		cv::Rect rect_left_side = Detector::BBoxConversion<507, 597, 26, 51>(game_img.cols, game_img.rows);		// area between L button and "Album"
-		cv::Rect rect_right_side = Detector::BBoxConversion<670, 771, 26, 51>(game_img.cols, game_img.rows);	// area between R button and "Album"
+		cv::Rect rect_left_side = Detector::BBoxConversion<507, 597, 26, 51>(img.cols, img.rows, game_rect);		// area between L button and "Album"
+		cv::Rect rect_right_side = Detector::BBoxConversion<670, 771, 26, 51>(img.cols, img.rows, game_rect);		// area between R button and "Album"
 		// nothing brighter than 100 in these areas
 		std::array<uint32_t, 256> pixel_count;
-		Detector::GreyscaleAccHistogram(game_img(rect_left_side), pixel_count);
+		Detector::GreyscaleAccHistogram(img(rect_left_side), pixel_count);
 		if (pixel_count[100] / double(rect_left_side.area()) < 0.95)
 			return false;
-		Detector::GreyscaleAccHistogram(game_img(rect_right_side), pixel_count);
+		Detector::GreyscaleAccHistogram(img(rect_right_side), pixel_count);
 		if (pixel_count[100] / double(rect_right_side.area()) < 0.95)
 			return false;
 	}
 
 	std::array<std::array<uint32_t, 256>, 3> pixel_count;
-	cv::Rect rect = Detector::BBoxConversion<600, 669, 26, 51>(game_img.cols, game_img.rows);		// top middle where "Album" is
+	cv::Rect rect = Detector::BBoxConversion<600, 669, 26, 51>(img.cols, img.rows, game_rect);		// top middle where "Album" is
 
-	Detector::BGRAccHistogram(game_img(rect), pixel_count);
+	Detector::BGRAccHistogram(img(rect), pixel_count);
 
 	if (pixel_count[2][128] / double(rect.area()) < 0.9)			// no pixel has red channel > 128
 		return false;
@@ -218,7 +216,7 @@ bool AlbumPageDetector::IsOnAlbumPage(const cv::Mat& game_img)
 		return false;
 
 	double scale_factor = 1;
-	std::string ret = Detector::OCR(game_img(rect), scale_factor, 85, 170, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
+	std::string ret = Detector::OCR(img(rect), scale_factor, 85, 170, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz. ");
 
 	return ret == "Album";
 }

@@ -140,21 +140,14 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 			if (frame_start != uint32_t(cap.get(cv::CAP_PROP_POS_FRAMES)))
 				cap.set(cv::CAP_PROP_POS_FRAMES, frame_start);
 
-			if (game_rect.x < 0 || game_rect.y < 0 || game_rect.x + game_rect.width >(int)width || game_rect.y + game_rect.height >(int)height)
-			{
-				std::cout << "game image area outside video frame" << std::endl;
-				exit(-1);
-			}
-
 			for (uint32_t cur_frame = frame_start; cur_frame <= frame_end; cur_frame++)
 			{
 				cv::Mat frame;
 				if (!cap.read(frame))
 					break;
 
-				cv::Mat game_frame = frame(game_rect);
 				{
-					EventType type = item_detector.GetEvent(game_frame);
+					EventType type = item_detector.GetEvent(frame, game_rect);
 					if (type != EventType::None)
 					{
 						outEvents.push_back({
@@ -166,7 +159,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					}
 				}
 
-				if (tower_detector.IsActivatingTower(game_frame))
+				if (tower_detector.IsActivatingTower(frame, game_rect))
 				{
 					outEvents.push_back({
 						.frame_number = cur_frame,
@@ -176,7 +169,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					});
 				}
 
-				if (travel_detector.IsTravelButtonPresent(game_frame))
+				if (travel_detector.IsTravelButtonPresent(frame, game_rect))
 				{
 					outEvents.push_back({
 						.frame_number = cur_frame,
@@ -187,7 +180,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				}
 
 				{
-					EventType type = bwl_detector.GetEvent(game_frame);
+					EventType type = bwl_detector.GetEvent(frame, game_rect);
 					if (type != EventType::None)
 					{
 						outEvents.push_back({
@@ -200,7 +193,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				}
 
 				{
-					SingleFrameEventData evt = singleline_detector.GetEvent(game_frame);
+					SingleFrameEventData evt = singleline_detector.GetEvent(frame, game_rect);
 					if (evt.type != EventType::None)
 					{
 						outEvents.push_back({
@@ -210,7 +203,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 					}
 				}
 
-				if (album_detector.IsOnAlbumPage(game_frame))
+				if (album_detector.IsOnAlbumPage(frame, game_rect))
 				{
 					outEvents.push_back({
 						.frame_number = cur_frame,
@@ -221,7 +214,7 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				}
 
 				{
-					uint8_t id = zm_detector.GetMonumentID(game_frame);
+					uint8_t id = zm_detector.GetMonumentID(frame, game_rect);
 					if (id >= 1 && id <= 10)
 					{
 						outEvents.push_back({

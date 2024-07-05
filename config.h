@@ -16,10 +16,10 @@ struct RunConfig
 			bool remove;
 		};
 		std::string filename;
-		uint32_t bbox_left;
-		uint32_t bbox_right;
-		uint32_t bbox_top;
-		uint32_t bbox_bottom;
+		int32_t bbox_left;
+		int32_t bbox_right;
+		int32_t bbox_top;
+		int32_t bbox_bottom;
 		std::vector<Segment> segments;
 		std::vector<Patch> patches;
 	};

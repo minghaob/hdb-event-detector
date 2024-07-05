@@ -58,10 +58,10 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 			std::cout << "run file: videos[" << video_idx << "].game_rect.size() != 4" << std::endl;
 			return false;
 		}
-		run_cfg.videos[video_idx].bbox_left = game_rect_node[0].as<uint32_t>();
-		run_cfg.videos[video_idx].bbox_top = game_rect_node[1].as<uint32_t>();
-		run_cfg.videos[video_idx].bbox_right = game_rect_node[2].as<uint32_t>();
-		run_cfg.videos[video_idx].bbox_bottom = game_rect_node[3].as<uint32_t>();
+		run_cfg.videos[video_idx].bbox_left = game_rect_node[0].as<int32_t>();
+		run_cfg.videos[video_idx].bbox_top = game_rect_node[1].as<int32_t>();
+		run_cfg.videos[video_idx].bbox_right = game_rect_node[2].as<int32_t>();
+		run_cfg.videos[video_idx].bbox_bottom = game_rect_node[3].as<int32_t>();
 
 		// .segments
 		YAML::Node segments_node = videos_node[video_idx]["segments"];
