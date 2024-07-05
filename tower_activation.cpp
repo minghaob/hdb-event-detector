@@ -139,13 +139,13 @@ EventType BlackWhiteLoadScreenDetector::GetEvent(const cv::Mat& img, const cv::R
 	std::array<uint32_t, 256> pixel_count;
 	Detector::GreyscaleAccHistogram(img(rect_top), pixel_count);
 	bool top_all_black = (pixel_count[9] / double(rect_top.area()) > 0.995);
-	bool top_all_white = (pixel_count[248] / double(rect_top.area()) < 0.005);
+	bool top_all_white = (pixel_count[246] / double(rect_top.area()) < 0.005);
 	if (!top_all_black && !top_all_white)
 		return EventType::None;
 
 	Detector::GreyscaleAccHistogram(img(rect_bottom), pixel_count);
 	bool bottom_all_black = (pixel_count[9] / double(rect_bottom.area()) > 0.995);
-	bool bottom_all_white = (pixel_count[248] / double(rect_bottom.area()) < 0.005);
+	bool bottom_all_white = (pixel_count[246] / double(rect_bottom.area()) < 0.005);
 
 	if (top_all_black)
 	{
