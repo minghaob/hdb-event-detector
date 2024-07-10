@@ -64,6 +64,20 @@ namespace __details{
 		{ DialogId::Kass6,			"Kass 6" },
 		{ DialogId::Kass7,			"Kass 7" },
 		{ DialogId::Kass8,			"Kass 8" },
+		{ DialogId::Vilia,			"Vilia" },
+		{ DialogId::Straia,			"Straia" },
+		{ DialogId::Jini,			"Jini" },
+		{ DialogId::Dugby,			"Dugby" },
+		{ DialogId::Zyle,			"Zyle" },
+		{ DialogId::Palme,			"Palme" },
+		{ DialogId::Flaxel,			"Flaxel" },
+		{ DialogId::Canolo,			"Canolo" },
+		{ DialogId::Oliff,			"Oliff" },
+		{ DialogId::Sesami1,		"Sesami 1" },
+		{ DialogId::Sesami2,		"Sesami 2" },
+		{ DialogId::Pirou,			"Pirou" },
+		{ DialogId::Perda,			"Perda" },
+		{ DialogId::Kheel,			"Kheel" },
 	});
 
 	static consteval bool VerifyDialogIdTable()

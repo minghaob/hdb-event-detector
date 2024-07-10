@@ -455,7 +455,7 @@ std::string EventAssembler::AssembledEventsToYAMLString(const std::vector<std::s
 			os << ", id: " << uint32_t(itor->evt.data.monument_data.monument_id);
 			break;
 		case EventType::Dialog:
-			os << ", npc: \"" << util::DialogIdToString(itor->evt.data.dialog_data.dialog_id) << '\"';
+			os << ", id: \"" << util::DialogIdToString(itor->evt.data.dialog_data.dialog_id) << '\"';
 			break;
 		default:
 			break;

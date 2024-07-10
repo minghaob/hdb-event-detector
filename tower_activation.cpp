@@ -75,6 +75,10 @@ bool ThreeLineDialogDetector::Init(const char* lang)
 	_3line_text_to_npc = {
 		{"But first you must", DialogId::Kass1},
 		{"When a lost hero", DialogId::Kass7},
+		{"He's at the Gerudo", DialogId::Canolo},
+		{"Ah, I'm glad to hear", DialogId::Oliff},
+		{"Hey, if you happen to", DialogId::Sesami1},
+		{"I guess I owe you too", DialogId::Perda},
 	};
 
 	for (uint32_t i = 0; i < uint32_t(_3line_text_to_npc.size()); i++)
@@ -87,6 +91,16 @@ bool ThreeLineDialogDetector::Init(const char* lang)
 		{"Best of luck, and may", DialogId::Kass5},
 		{"Where the forest", DialogId::Kass6},
 		{"Good luck figuring", DialogId::Kass8},
+		{"If you want to get", DialogId::Vilia},
+		{"To think that there", DialogId::Straia},
+		{"You and your horse", DialogId::Jini},
+		{"Well, it looks like", DialogId::Dugby},
+		{"So off we go, me", DialogId::Zyle},
+		{"Sesami...is waiting", DialogId::Palme},
+		{"Oh, I'm going to go", DialogId::Flaxel},
+		{"Not really sure that", DialogId::Sesami2},
+		{"Just remember that I", DialogId::Pirou},
+		{"She doesn't want to", DialogId::Kheel},
 	};
 
 	for (uint32_t i = 0; i < uint32_t(_2line_text_to_npc.size()); i++)
