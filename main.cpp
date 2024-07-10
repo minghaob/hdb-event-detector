@@ -538,7 +538,7 @@ int main(int argc, char* argv[])
 		{
 			if (i != std::to_underlying(DialogId::None) && dialog_counter[i] != 1)
 			{
-				std::cout << "!!! dialog count for dialog_id " << i << " not as expected (1)" << std::endl;
+				std::cout << "!!! dialog count for dialog_id " << i <<"(" << dialog_counter[i] << ") not as expected (1)" << std::endl;
 			}
 		}
 	}

@@ -79,6 +79,7 @@ bool ThreeLineDialogDetector::Init(const char* lang)
 		{"Ah, I'm glad to hear", DialogId::Oliff},
 		{"Hey, if you happen to", DialogId::Sesami1},
 		{"I guess I owe you too", DialogId::Perda},
+		{"Well, it looks like", DialogId::Dugby},
 	};
 
 	for (uint32_t i = 0; i < uint32_t(_3line_text_to_npc.size()); i++)
@@ -91,10 +92,9 @@ bool ThreeLineDialogDetector::Init(const char* lang)
 		{"Best of luck, and may", DialogId::Kass5},
 		{"Where the forest", DialogId::Kass6},
 		{"Good luck figuring", DialogId::Kass8},
-		{"If you want to get", DialogId::Vilia},
+		{"If you want to get more", DialogId::Vilia},
 		{"To think that there", DialogId::Straia},
 		{"You and your horse", DialogId::Jini},
-		{"Well, it looks like", DialogId::Dugby},
 		{"So off we go, me", DialogId::Zyle},
 		{"Sesami...is waiting", DialogId::Palme},
 		{"Oh, I'm going to go", DialogId::Flaxel},
@@ -123,7 +123,7 @@ SingleFrameEventData ThreeLineDialogDetector::Get2LineDialogEvent(const cv::Mat&
 			return { .type = EventType::None };
 	}
 
-	cv::Rect rect = Detector::BBoxConversion<420, 701, 569, 596>(img.cols, img.rows, game_rect);
+	cv::Rect rect = Detector::BBoxConversion<420, 850, 569, 596>(img.cols, img.rows, game_rect);
 
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
