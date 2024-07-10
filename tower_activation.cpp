@@ -125,9 +125,16 @@ SingleFrameEventData ThreeLineDialogDetector::Get2LineDialogEvent(const cv::Mat&
 
 	cv::Rect rect = Detector::BBoxConversion<420, 850, 569, 596>(img.cols, img.rows, game_rect);
 
+	cv::Range clampedXRange = Detector::GreyscaleHorizontalClamp(img(rect), 180, 255);
+	if (clampedXRange.size() < rect.width / 3)		// there's too few text to recognize
+		return { .type = EventType::None };
+	rect.width = clampedXRange.size() + 1;
+	rect.x += clampedXRange.start;
+
 	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
 		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
 	};
+
 	if (!Detector::GreyscaleTest(img(rect), crit))
 		return { .type = EventType::None };
 

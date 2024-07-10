@@ -66,6 +66,28 @@ void Detector::GreyscaleAccHistogram(const cv::Mat& img, std::array<uint32_t, 25
 		pix_count[i] += pix_count[i - 1];
 }
 
+cv::Range Detector::GreyscaleHorizontalClamp(const cv::Mat& img, uint8_t brightness_lower, uint8_t brightness_upper)
+{
+	cv::Mat grey_image;
+	cv::cvtColor(img, grey_image, cv::COLOR_BGR2GRAY);		// converting to gray
+
+	int32_t left = img.cols;
+	int32_t right = -1;
+
+	for (int i = 0; i < grey_image.rows; i++)
+	{
+		uint8_t* data = grey_image.row(i).data;
+		for (int j = 0; j < grey_image.cols; j++)
+			if (data[j] >= brightness_lower && data[j] <= brightness_upper)
+			{
+				left = std::min(left, j);
+				right = std::max(right, j);
+			}
+	}
+
+	return cv::Range(left, right);
+}
+
 void Detector::BGRAccHistogram(const cv::Mat& img, std::array<std::array<uint32_t, 256>, 3>& pix_count)
 {
 	pix_count[0].fill(0);
