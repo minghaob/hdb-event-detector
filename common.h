@@ -108,28 +108,28 @@ enum class EventType : uint8_t
 enum class DialogId : uint8_t
 {
 	None,
-	Kass1,
-	Kass2,
-	Kass3,
-	Kass4,
-	Kass5,
-	Kass6,
-	Kass7,
-	Kass8,
-	Vilia,
-	Straia,
-	Jini,
-	Dugby,
-	Zyle,
-	Palme,
+	Kass1,			// blood moon quest
+	Kass2,			// two ring quest
+	Kass3,			// stag quest
+	Kass4,			// master of wind, land on paraglider quest
+	Kass5,			// Sasa Kai quest
+	Kass6,			// farosh scale quest
+	Kass7,			// thunder strike quest
+	Kass8,			// 300 gold cache quest
+	Vilia,			// sells gerudo outfit
+	Straia,			// giant horse quest
+	Jini,			// archery challenge quest
+	Dugby,			// drillshaft quest
+	Zyle,			// gerudo canyon horse quest
+	Palme,			// 4 friends of Sesami
 	Flaxel,
 	Canolo,
 	Oliff,
-	Sesami1,
-	Sesami2,
-	Pirou,
-	Perda,
-	Kheel,
+	Sesami1,		// get Sesami quest
+	Sesami2,		// turn-in Sesami quest
+	Pirou,			// 55 rushroom quest
+	Perda,			// nightshade gift quest
+	Kheel,			// at warbler's nest
 	Max,
 };
 
