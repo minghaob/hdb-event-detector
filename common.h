@@ -130,6 +130,7 @@ enum class DialogId : uint8_t
 	Pirou,			// 55 rushroom quest
 	Perda,			// nightshade gift quest
 	Kheel,			// at warbler's nest
+	LeviathanBros,	// Akrah, Garshon and Onya, dialog depends on who is talked to last
 	Max,
 };
 

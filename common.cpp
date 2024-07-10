@@ -78,10 +78,13 @@ namespace __details{
 		{ DialogId::Pirou,			"Pirou" },
 		{ DialogId::Perda,			"Perda" },
 		{ DialogId::Kheel,			"Kheel" },
+		{ DialogId::LeviathanBros,	"Leviathan Bros" },
 	});
 
 	static consteval bool VerifyDialogIdTable()
 	{
+		if (uint32_t(dialog_ids.size()) != std::to_underlying(DialogId::Max))
+			return false;
 		for (uint32_t i = 0; i < std::to_underlying(DialogId::Max); i++)
 			if (std::to_underlying(dialog_ids[i].first) != i)
 				return false;

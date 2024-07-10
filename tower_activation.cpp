@@ -80,6 +80,8 @@ bool ThreeLineDialogDetector::Init(const char* lang)
 		{"Hey, if you happen to", DialogId::Sesami1},
 		{"I guess I owe you too", DialogId::Perda},
 		{"Well, it looks like", DialogId::Dugby},
+		{"I shall conduct further", DialogId::LeviathanBros},	// talk to Akrah last
+		{"I'll continue to research", DialogId::LeviathanBros},	// talk to Onya last
 	};
 
 	for (uint32_t i = 0; i < uint32_t(_3line_text_to_npc.size()); i++)
@@ -101,6 +103,7 @@ bool ThreeLineDialogDetector::Init(const char* lang)
 		{"Not really sure that", DialogId::Sesami2},
 		{"Just remember that I", DialogId::Pirou},
 		{"She doesn't want to", DialogId::Kheel},
+		{"Your pictures will do", DialogId::LeviathanBros},	// talk to Garshon last
 	};
 
 	for (uint32_t i = 0; i < uint32_t(_2line_text_to_npc.size()); i++)
