@@ -53,10 +53,32 @@ namespace __details{
 
 		return ret;
 	}
+
+	constexpr auto dialog_ids = std::to_array<std::pair<DialogId, std::string_view>>({
+		{ DialogId::None,			"None" },
+		{ DialogId::Kass1,			"Kass 1" },
+		{ DialogId::Kass2,			"Kass 2" },
+		{ DialogId::Kass3,			"Kass 3" },
+		{ DialogId::Kass4,			"Kass 4" },
+		{ DialogId::Kass5,			"Kass 5" },
+		{ DialogId::Kass6,			"Kass 6" },
+		{ DialogId::Kass7,			"Kass 7" },
+		{ DialogId::Kass8,			"Kass 8" },
+	});
+
+	static consteval bool VerifyDialogIdTable()
+	{
+		for (uint32_t i = 0; i < std::to_underlying(DialogId::Max); i++)
+			if (std::to_underlying(dialog_ids[i].first) != i)
+				return false;
+		return true;
+	}
 }
 
 constexpr std::array<std::string_view, uint32_t(EventType::Max)> event_message = __details::CreateEventMessageArray();
 static_assert(__details::VerifyMsgTable(event_message));
+
+static_assert(__details::VerifyDialogIdTable());
 
 namespace util
 {
@@ -155,6 +177,11 @@ EventType GetEventType(const std::string_view& s)
 	}
 
 	return EventType::None;
+}
+
+std::string_view DialogIdToString(DialogId id)
+{
+	return __details::dialog_ids[std::to_underlying(id)].second;
 }
 
 }

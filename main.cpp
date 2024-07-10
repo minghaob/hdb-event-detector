@@ -93,6 +93,10 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 	if (!singleline_detector.Init(lang.c_str()))
 		return;
 
+	ThreeLineDialogDetector threeline_detector(shared_tess_api.API());
+	if (!threeline_detector.Init(lang.c_str()))
+		return;
+
 	ZoraMonumentDetector zm_detector(shared_tess_api.API());
 	if (!zm_detector.Init(lang.c_str()))
 		return;
@@ -194,6 +198,17 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 
 				{
 					SingleFrameEventData evt = singleline_detector.GetEvent(frame, game_rect);
+					if (evt.type != EventType::None)
+					{
+						outEvents.push_back({
+							.frame_number = cur_frame,
+							.data = evt,
+						});
+					}
+				}
+
+				{
+					SingleFrameEventData evt = threeline_detector.GetEvent(frame, game_rect);
 					if (evt.type != EventType::None)
 					{
 						outEvents.push_back({
@@ -338,6 +353,8 @@ int main(int argc, char* argv[])
 	std::cout << "Processing with " << num_threads << " work threads" << std::endl;
 
 	std::map<EventType, uint32_t> event_counter;
+	std::array<uint32_t, uint32_t(DialogId::Max)> dialog_counter;
+	dialog_counter.fill(0);
 
 	for (uint32_t i = 0; i < uint32_t(cfg.videos.size()); i++)
 	{
@@ -476,7 +493,18 @@ int main(int argc, char* argv[])
 		}
 
 		for (const auto& evt : assembled_events)
+		{
 			event_counter.try_emplace(evt->evt.data.type, 0).first->second++;
+			if (evt->evt.data.type == EventType::Dialog)
+			{
+				if (evt->evt.data.dialog_data.dialog_id == DialogId::None || std::to_underlying(evt->evt.data.dialog_data.dialog_id) >= std::to_underlying(DialogId::Max))
+				{
+					std::cout << "!!! Invalid dialog id " << std::to_underlying(evt->evt.data.dialog_data.dialog_id) << std::endl;
+					continue;
+				}
+				dialog_counter[std::to_underlying(evt->evt.data.dialog_data.dialog_id)]++;
+			}
+		}
 	}
 
 	for (auto& itor : event_counter)
@@ -484,7 +512,7 @@ int main(int argc, char* argv[])
 
 	if (yaml_file_path.filename() == "run.yaml")
 	{
-		std::pair<EventType, uint32_t> expected_count[] = {
+		constexpr std::pair<EventType, uint32_t> expected_count[] = {
 			{ EventType::Korok, 900},
 			{ EventType::Shrine, 120},
 			{ EventType::TowerActivation, 15},
@@ -496,6 +524,7 @@ int main(int argc, char* argv[])
 			{ EventType::Rudania, 1},
 			{ EventType::Paraglider, 1},
 			{ EventType::ThunderHelm, 1},
+			{ EventType::Dialog, uint32_t(DialogId::Max) - 1},		// excluding DialogId::None
 		};
 
 		for (uint32_t i = 0; i < uint32_t(sizeof(expected_count) / sizeof(expected_count[0])); i++)
@@ -503,6 +532,14 @@ int main(int argc, char* argv[])
 			auto itor = event_counter.find(expected_count[i].first);
 			if (itor == event_counter.end() || itor->second != expected_count[i].second)
 				std::cout << "!!! " << util::GetEventText(expected_count[i].first) << " count not as expected (" << expected_count[i].second << ")" << std::endl;
+		}
+
+		for (uint32_t i = 0; i < std::to_underlying(DialogId::Max); i++)
+		{
+			if (i != std::to_underlying(DialogId::None) && dialog_counter[i] != 1)
+			{
+				std::cout << "!!! dialog count for dialog_id " << i << " not as expected (1)" << std::endl;
+			}
 		}
 	}
 

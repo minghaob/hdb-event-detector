@@ -18,6 +18,17 @@ bool TowerActivationDetector::IsActivatingTower(const cv::Mat& img, const cv::Re
 	return ret == "Sheikah Tower activated.";
 }
 
+bool SingleLineDialogDetector::Init(const char* lang)
+{
+	_1line_text_to_npc = {
+	};
+
+	for (uint32_t i = 0; i < uint32_t(_1line_text_to_npc.size()); i++)
+		util::UnifyAmbiguousChars(_1line_text_to_npc[i].first);
+
+	return true;
+}
+
 SingleFrameEventData SingleLineDialogDetector::GetEvent(const cv::Mat& img, const cv::Rect& game_rect)
 {
 	{
@@ -47,10 +58,118 @@ SingleFrameEventData SingleLineDialogDetector::GetEvent(const cv::Mat& img, cons
 		return { .type = EventType::GateRegistered };
 	else if (ret == "Sheikah Slate authenticated.")
 		return { .type = EventType::SlateAuthenticated };
+	else
+	{
+		for (uint32_t i = 0; i < uint32_t(_1line_text_to_npc.size()); i++)
+			if (ret.size() >= _1line_text_to_npc[i].first.size() && util::GetStringEditDistance(std::string_view(ret).substr(0, _1line_text_to_npc[i].first.size()), _1line_text_to_npc[i].first, 4) <= 4)
+				return { .type = EventType::Dialog, .dialog_data = {.dialog_id = _1line_text_to_npc[i].second} };
+	}
 	//else if (ret == "Time has taken its toll on this...")
 	//	return { .type = EventType::ZoraMonument, .monument_data = { .monument_id = 8 } };
 
 	return { .type = EventType::None };
+}
+
+bool ThreeLineDialogDetector::Init(const char* lang)
+{
+	_3line_text_to_npc = {
+		{"But first you must", DialogId::Kass1},
+		{"When a lost hero", DialogId::Kass7},
+	};
+
+	for (uint32_t i = 0; i < uint32_t(_3line_text_to_npc.size()); i++)
+		util::UnifyAmbiguousChars(_3line_text_to_npc[i].first);
+
+	_2line_text_to_npc = {
+		{"When a single arrow", DialogId::Kass2},
+		{"Mount the beast", DialogId::Kass3},
+		{"On wings of cloth", DialogId::Kass4},
+		{"Best of luck, and may", DialogId::Kass5},
+		{"Where the forest", DialogId::Kass6},
+		{"Good luck figuring", DialogId::Kass8},
+	};
+
+	for (uint32_t i = 0; i < uint32_t(_2line_text_to_npc.size()); i++)
+		util::UnifyAmbiguousChars(_2line_text_to_npc[i].first);
+
+	return true;
+}
+
+SingleFrameEventData ThreeLineDialogDetector::Get2LineDialogEvent(const cv::Mat& img, const cv::Rect& game_rect)
+{
+	{
+		cv::Rect rect_upper = Detector::BBoxConversion<470, 810, 535, 567>(img.cols, img.rows, game_rect);
+		cv::Rect rect_lower = Detector::BBoxConversion<470, 810, 621, 655>(img.cols, img.rows, game_rect);
+		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+			{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0, .pixel_ratio_upper = 0.05}
+		};
+		if (!Detector::GreyscaleTest(img(rect_upper), crit))
+			return { .type = EventType::None };
+		if (!Detector::GreyscaleTest(img(rect_lower), crit))
+			return { .type = EventType::None };
+	}
+
+	cv::Rect rect = Detector::BBoxConversion<420, 701, 569, 596>(img.cols, img.rows, game_rect);
+
+	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
+	};
+	if (!Detector::GreyscaleTest(img(rect), crit))
+		return { .type = EventType::None };
+
+	double scale_factor = 1;
+	std::string ret = Detector::OCR(img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz,.'-!\" ");
+	util::UnifyAmbiguousChars(ret);
+
+	for (uint32_t i = 0; i < uint32_t(_2line_text_to_npc.size()); i++)
+		if (ret.size() >= _2line_text_to_npc[i].first.size() && util::GetStringEditDistance(std::string_view(ret).substr(0, _2line_text_to_npc[i].first.size()), _2line_text_to_npc[i].first, 4) <= 4)
+			return { .type = EventType::Dialog, .dialog_data = { .dialog_id = _2line_text_to_npc[i].second} };
+
+	return { .type = EventType::None };
+}
+
+SingleFrameEventData ThreeLineDialogDetector::Get3LineDialogEvent(const cv::Mat& img, const cv::Rect& game_rect)
+{
+	{
+		cv::Rect rect_upper = Detector::BBoxConversion<470, 810, 535, 554>(img.cols, img.rows, game_rect);
+		cv::Rect rect_lower = Detector::BBoxConversion<470, 810, 636, 655>(img.cols, img.rows, game_rect);
+		static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+			{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0, .pixel_ratio_upper = 0.05}
+		};
+		if (!Detector::GreyscaleTest(img(rect_upper), crit))
+			return { .type = EventType::None };
+		if (!Detector::GreyscaleTest(img(rect_lower), crit))
+			return { .type = EventType::None };
+	}
+
+	cv::Rect rect = Detector::BBoxConversion<420, 850, 555, 582>(img.cols, img.rows, game_rect);
+
+	static const std::vector<Detector::GreyScaleTestCriteria> crit = {
+		{.brightness_range_lower = 205, .brightness_range_upper = 255, .pixel_ratio_lower = 0.1, .pixel_ratio_upper = 0.3}
+	};
+	if (!Detector::GreyscaleTest(img(rect), crit))
+		return { .type = EventType::None };
+
+	double scale_factor = 1;
+	std::string ret = Detector::OCR(img(rect), scale_factor, 180, 255, true, _tess_api, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz,.'-!\" ");
+	util::UnifyAmbiguousChars(ret);
+
+	for (uint32_t i = 0; i < uint32_t(_3line_text_to_npc.size()); i++)
+		if (ret.size() >= _3line_text_to_npc[i].first.size() && util::GetStringEditDistance(std::string_view(ret).substr(0, _3line_text_to_npc[i].first.size()), _3line_text_to_npc[i].first, 4) <= 4)
+			return { .type = EventType::Dialog, .dialog_data = { .dialog_id = _3line_text_to_npc[i].second} };
+
+	return { .type = EventType::None };
+}
+
+SingleFrameEventData ThreeLineDialogDetector::GetEvent(const cv::Mat& img, const cv::Rect& game_rect)
+{
+	SingleFrameEventData ret;
+	ret = Get2LineDialogEvent(img, game_rect);
+	if (ret.type != EventType::None)
+		return ret;
+
+	ret = Get3LineDialogEvent(img, game_rect);
+	return ret;
 }
 
 bool ZoraMonumentDetector::Init(const char* lang)
@@ -67,6 +186,7 @@ bool ZoraMonumentDetector::Init(const char* lang)
 		"Ever since, the fishers",
 		"Still, it is worth it!",
 	};
+
 	for (uint32_t i = 0; i < uint32_t(_line1_texts.size()); i++)
 		util::UnifyAmbiguousChars(_line1_texts[i]);
 

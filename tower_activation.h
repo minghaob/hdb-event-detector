@@ -25,6 +25,7 @@ class SingleLineDialogDetector
 {
 private:
 	tesseract::TessBaseAPI& _tess_api;
+	std::vector<std::pair<std::string, DialogId>> _1line_text_to_npc;
 
 public:
 	SingleLineDialogDetector(tesseract::TessBaseAPI& api)
@@ -32,10 +33,28 @@ public:
 	}
 	~SingleLineDialogDetector() = default;
 
-	bool Init(const char* lang) {
-		return true;
-	}
+	bool Init(const char* lang);
 
+	SingleFrameEventData GetEvent(const cv::Mat& img, const cv::Rect& game_rect);
+};
+
+class ThreeLineDialogDetector
+{
+private:
+	tesseract::TessBaseAPI& _tess_api;
+	std::vector<std::pair<std::string, DialogId>> _3line_text_to_npc;
+	std::vector<std::pair<std::string, DialogId>> _2line_text_to_npc;
+
+public:
+	ThreeLineDialogDetector(tesseract::TessBaseAPI& api)
+		: _tess_api(api) {
+	}
+	~ThreeLineDialogDetector() = default;
+
+	bool Init(const char* lang);
+
+	SingleFrameEventData Get2LineDialogEvent(const cv::Mat& img, const cv::Rect& game_rect);
+	SingleFrameEventData Get3LineDialogEvent(const cv::Mat& img, const cv::Rect& game_rect);
 	SingleFrameEventData GetEvent(const cv::Mat& img, const cv::Rect& game_rect);
 };
 

@@ -105,6 +105,20 @@ enum class EventType : uint8_t
 	Max,
 };
 
+enum class DialogId : uint8_t
+{
+	None,
+	Kass1,
+	Kass2,
+	Kass3,
+	Kass4,
+	Kass5,
+	Kass6,
+	Kass7,
+	Kass8,
+	Max,
+};
+
 namespace util
 {
 	/**
@@ -125,23 +139,23 @@ namespace util
 
 	std::string_view GetEventText(EventType t);
 	EventType GetEventType(const std::string_view& s);
+	std::string_view DialogIdToString(DialogId id);
 }
 
+#pragma pack(push, 1)
 struct SingleFrameEventData
 {
 	EventType type;
 	union {
 		struct {
 			uint8_t num_shrines;
-			uint8_t num_koroks;
+			uint16_t num_koroks;
 		} loadscreen_data;
 		struct {
 			uint8_t monument_id;
 		} monument_data;
 		struct {
-			uint8_t quest_id;
-			uint8_t dialog_id;
-			uint8_t npc_id;
+			DialogId dialog_id;
 		} dialog_data;
 	};
 	bool operator==(const SingleFrameEventData& other) const
@@ -153,15 +167,14 @@ struct SingleFrameEventData
 		case EventType::ZoraMonument:
 			return monument_data.monument_id == other.monument_data.monument_id;
 		case EventType::Dialog:
-			return dialog_data.npc_id == other.dialog_data.npc_id
-				&& dialog_data.dialog_id == other.dialog_data.dialog_id
-				&& dialog_data.quest_id == other.dialog_data.quest_id;
+			return dialog_data.dialog_id == other.dialog_data.dialog_id;
 			break;
 		default:
 			return true;
 		}
 	}
 };
+#pragma pack(pop)
 
 struct SingleFrameEvent
 {

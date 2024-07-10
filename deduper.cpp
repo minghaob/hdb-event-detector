@@ -26,6 +26,7 @@ namespace __details
 		{ EventType::DarukProtection,		30 },
 		{ EventType::Paraglider,			30 },
 		{ EventType::ThunderHelm,			90 },
+		{ EventType::Dialog,				30 },
 	});
 
 	static consteval std::array<uint32_t, uint32_t(EventType::Max)> CreateMinimalSpacingArray()
@@ -95,6 +96,10 @@ std::string EventDeduper::DedupedEventsToYAMLString(std::vector<MultiFrameEvent>
 		{
 		case EventType::ZoraMonument:
 			os << ", " << uint32_t(itor.evt.data.monument_data.monument_id);
+			break;
+		case EventType::Dialog:
+			os << ", \"" << util::DialogIdToString(itor.evt.data.dialog_data.dialog_id) << '\"';
+			break;
 		default:
 			break;
 		}
@@ -448,6 +453,9 @@ std::string EventAssembler::AssembledEventsToYAMLString(const std::vector<std::s
 		{
 		case EventType::ZoraMonument:
 			os << ", id: " << uint32_t(itor->evt.data.monument_data.monument_id);
+			break;
+		case EventType::Dialog:
+			os << ", npc: \"" << util::DialogIdToString(itor->evt.data.dialog_data.dialog_id) << '\"';
 			break;
 		default:
 			break;
