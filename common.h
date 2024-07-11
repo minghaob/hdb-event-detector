@@ -154,6 +154,7 @@ namespace util
 
 	std::string_view GetEventText(EventType t);
 	EventType GetEventType(const std::string_view& s);
+	DialogId GetDialogId(const std::string_view& s);
 	std::string_view DialogIdToString(DialogId id);
 }
 

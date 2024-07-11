@@ -176,17 +176,32 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 				std::cout << "run file: patch[" << patch_idx << "].event has unrecognized value \"" << event_text << "\"" << std::endl;
 				return false;
 			}
-			run_cfg.videos[video_idx].patches.push_back({
-					.evt = {
-						.frame_number = frame_number,
-						.data = {
-							.type = event_type,
-						}
-					},
-					.end_frame = end_frame,
-					.remove = remove,
+			SingleFrameEvent evt = {
+				.frame_number = frame_number,
+				.data = {
+					.type = event_type,
 				}
-			);
+			};
+			if (event_type == EventType::Dialog)
+			{
+				YAML::Node dialog_id_node = cur_patch["dialog_id"];
+				if (!dialog_id_node)
+				{
+					std::cout << "run file: patch[" << patch_idx << "].dialog_id expected for \"" << event_text << "\" event" << std::endl;
+					return false;
+				}
+				evt.data.dialog_data.dialog_id = util::GetDialogId(dialog_id_node.as<std::string>());
+				if (evt.data.dialog_data.dialog_id == DialogId::None)
+				{
+					std::cout << "run file: patch[" << patch_idx << "].dialog_id \"" << dialog_id_node.as<std::string>() << "\" not recognized" << std::endl;
+					return false;
+				}
+			}
+			run_cfg.videos[video_idx].patches.push_back({
+				.evt = evt,
+				.end_frame = end_frame,
+				.remove = remove,
+			});
 
 		}
 

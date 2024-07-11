@@ -196,6 +196,17 @@ EventType GetEventType(const std::string_view& s)
 	return EventType::None;
 }
 
+DialogId GetDialogId(const std::string_view& s)
+{
+	for (uint32_t i = 0; i < uint32_t(__details::dialog_ids.size()); i++)
+	{
+		if (s == __details::dialog_ids[i].second)
+			return __details::dialog_ids[i].first;
+	}
+
+	return DialogId::None;
+}
+
 std::string_view DialogIdToString(DialogId id)
 {
 	return __details::dialog_ids[std::to_underlying(id)].second;
