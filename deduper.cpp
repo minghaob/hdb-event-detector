@@ -214,21 +214,26 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 		// assemble load events
 		if (i + 2 < uint32_t(events.size())
 			&& events[i].evt.data.type == EventType::BlackScreen
-			&& events[i + 1].evt.data.type == EventType::LoadingScreen
-			&& events[i + 2].evt.data.type == EventType::BlackScreen)
+			&& events[i + 1].evt.data.type == EventType::LoadingScreen)
 		{
-			MultiFrameEvent load_event{
-				.evt = {
-					.frame_number = events[i].evt.frame_number,
-					.data = {
-						.type = EventType::Load,
+			uint32_t j = i + 2;
+			while (j < uint32_t(events.size()) && events[j].evt.data.type == EventType::LoadingScreen)			// There could be multiple loading screen events between the 2 black screen events, caused by video compression error
+				j++;
+			if (j < uint32_t(events.size()) && events[j].evt.data.type == EventType::BlackScreen)
+			{
+				MultiFrameEvent load_event{
+					.evt = {
+						.frame_number = events[i].evt.frame_number,
+						.data = {
+							.type = EventType::Load,
+						},
 					},
-				},
-				.duration = events[i + 2].LastFrame() - events[i].evt.frame_number + 1,
-			};
-			i += 2;			// skip the next 2 events
-			event_set.emplace(std::make_shared<AssembledEvent>(load_event));
-			continue;
+					.duration = events[j].LastFrame() - events[i].evt.frame_number + 1,
+				};
+				i = j;			// skip the loading screen and trailing black screen events
+				event_set.emplace(std::make_shared<AssembledEvent>(load_event));
+				continue;
+			}
 		}
 
 		// assemble memory events
