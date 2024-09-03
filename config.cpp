@@ -50,6 +50,14 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 			return false;
 		}
 		run_cfg.videos[video_idx].filename = local_node.as<std::string>();
+		for (std::size_t comp_idx = 0; comp_idx < video_idx; comp_idx++)
+		{
+			if (run_cfg.videos[video_idx].filename == run_cfg.videos[comp_idx].filename)
+			{
+				std::cout << "run file: videos[" << video_idx << "].local == videos[" << comp_idx << "].local" << std::endl;
+				return false;
+			}
+		}
 
 		// .game_rect
 		YAML::Node game_rect_node = videos_node[video_idx]["game_rect"];
