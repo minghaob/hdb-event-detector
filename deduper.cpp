@@ -340,9 +340,9 @@ void EventAssembler::Assemble(const std::vector<MultiFrameEvent>& events, std::v
 
 				// Load (leave shrine) after SpiritOrb
 				auto itor_leave_load = itor_orb;
-				while ((*itor_leave_load)->evt.data.type != EventType::Load && itor_leave_load != event_set.end())
+				while (itor_leave_load != event_set.end() && (*itor_leave_load)->evt.data.type != EventType::Load)
 					itor_leave_load++;
-				if ((*itor_leave_load)->evt.data.type != EventType::Load)
+				if (itor_leave_load == event_set.end())
 					return false;
 
 				// the old itor_next might be invalidated by the erases below
