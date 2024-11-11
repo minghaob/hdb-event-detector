@@ -20,6 +20,8 @@ struct RunConfig
 		int32_t bbox_right;
 		int32_t bbox_top;
 		int32_t bbox_bottom;
+		double color_scale;
+		double color_shift;
 		std::vector<Segment> segments;
 		std::vector<Patch> patches;
 	};

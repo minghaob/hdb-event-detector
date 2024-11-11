@@ -55,7 +55,7 @@ public:
 	}
 };
 
-void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector<SingleFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
+void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, double color_scale, double color_shift, std::vector<SingleFrameEvent> &outEvents, uint32_t &num_frame_parsed, VideoParserScheduler &scheduler, const ::GROUP_AFFINITY *thread_affinity)
 {
 	::SetThreadGroupAffinity(::GetCurrentThread(), thread_affinity, nullptr);
 
@@ -149,6 +149,9 @@ void AnalyseVideo(const std::string &video_file, cv::Rect game_rect, std::vector
 				cv::Mat frame;
 				if (!cap.read(frame))
 					break;
+
+				if (color_scale != 1 || color_shift != 0)
+					cv::convertScaleAbs(frame, frame, color_scale, color_shift);
 
 				{
 					EventType type = item_detector.GetEvent(frame, game_rect);
@@ -373,6 +376,7 @@ int main(int argc, char* argv[])
 				threads.emplace_back(AnalyseVideo,
 					(yaml_path / cfg.videos[i].filename).string(),
 					cv::Rect(cfg.videos[i].bbox_left, cfg.videos[i].bbox_top, cfg.videos[i].bbox_right - cfg.videos[i].bbox_left + 1, cfg.videos[i].bbox_bottom - cfg.videos[i].bbox_top + 1),
+					cfg.videos[i].color_scale, cfg.videos[i].color_shift,
 					std::ref(events[thd_idx]),
 					std::ref(num_frame_parsed[thd_idx]),
 					std::ref(scheduler),

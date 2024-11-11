@@ -71,6 +71,24 @@ bool LoadRunYaml(RunConfig &run_cfg, std::string run_file)
 		run_cfg.videos[video_idx].bbox_right = game_rect_node[2].as<int32_t>();
 		run_cfg.videos[video_idx].bbox_bottom = game_rect_node[3].as<int32_t>();
 
+		// .color_scale_shift
+		YAML::Node color_scale_shift_node = videos_node[video_idx]["color_scale_shift"];
+		if (color_scale_shift_node)
+		{
+			if (!color_scale_shift_node.IsSequence() || color_scale_shift_node.size() != 2)
+			{
+				std::cout << "run file: videos[" << video_idx << "].color_scale_shift_node.size() != 2" << std::endl;
+				return false;
+			}
+			run_cfg.videos[video_idx].color_scale = color_scale_shift_node[0].as<double>();
+			run_cfg.videos[video_idx].color_shift = color_scale_shift_node[1].as<double>();
+		}
+		else
+		{
+			run_cfg.videos[video_idx].color_scale = 1;
+			run_cfg.videos[video_idx].color_shift = 0;
+		}
+
 		// .segments
 		YAML::Node segments_node = videos_node[video_idx]["segments"];
 		if (!segments_node || !segments_node.IsSequence() || segments_node.size() == 0)
